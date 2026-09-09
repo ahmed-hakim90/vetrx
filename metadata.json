@@ -1,0 +1,6 @@
+{
+  "name": "Voltix Bilingual Electronics Storefront",
+  "description": "Production-quality bilingual (English LTR & Arabic RTL) electronics storefront supporting multiple WooCommerce stores, with Homepage, PLP, PDP, and Cart & Checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
