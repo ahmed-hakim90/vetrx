@@ -20,6 +20,14 @@ export const translations = {
     emptyCartTitle: 'Your cart is empty',
     emptyCartDesc: 'Looks like you have not added any tech essentials yet.',
     startShopping: 'Explore Products',
+    wishlistTitle: 'My Wishlist',
+    emptyWishlistTitle: 'Your wishlist is empty',
+    emptyWishlistDesc: 'Save items you love here and easily add them to your cart later.',
+    moveToCart: 'Move to Cart',
+    quickViewTitle: 'Quick Product Preview',
+    viewFullDetails: 'View Full Technical Details',
+    close: 'Close',
+    clearWishlist: 'Clear Wishlist',
     
     // Navigation items
     navHome: 'Home',
@@ -274,6 +282,14 @@ export const translations = {
     emptyCartTitle: 'سلة المشتريات فارغة',
     emptyCartDesc: 'يبدو أنك لم تضف أي منتجات تقنية إلى سلتك بعد.',
     startShopping: 'استكشف المنتجات',
+    wishlistTitle: 'قائمة رغباتي ومفضلاتي',
+    emptyWishlistTitle: 'قائمة المفضلة فارغة حالياً',
+    emptyWishlistDesc: 'احفظ المنتجات التقنية التي تعجبك هنا لتتمكن من إضافتها بسهولة إلى سلتك لاحقاً.',
+    moveToCart: 'نقل إلى السلة',
+    quickViewTitle: 'نظرة سريعة على المنتج',
+    viewFullDetails: 'عرض كافة المواصفات والتفاصيل',
+    close: 'إغلاق',
+    clearWishlist: 'مسح قائمة المفضلة',
     
     // Navigation items
     navHome: 'الرئيسية',

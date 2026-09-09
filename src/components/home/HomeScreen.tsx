@@ -37,6 +37,7 @@ export const HomeScreen: React.FC = () => {
     addToCart,
     toggleWishlist,
     isInWishlist,
+    setQuickViewProductId,
     navigateToProduct,
     navigateToCategory,
     setActiveScreen,
@@ -469,23 +470,36 @@ export const HomeScreen: React.FC = () => {
                     </span>
                   )}
 
-                  {/* Wishlist button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleWishlist(product.id);
-                    }}
-                    className={`absolute top-3 right-3 rtl:right-auto rtl:left-3 p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
-                      inWish
-                        ? 'bg-rose-50 text-rose-500'
-                        : 'bg-white/80 text-slate-600 hover:text-rose-500 hover:bg-white'
-                    }`}
-                    title={t('addToWishlist')}
-                  >
-                    <Heart
-                      className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
-                    />
-                  </button>
+                  {/* Action buttons (Wishlist & Quick View) */}
+                  <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3 flex flex-col gap-1.5 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(product.id);
+                      }}
+                      className={`p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
+                        inWish
+                          ? 'bg-rose-50 text-rose-500'
+                          : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
+                      }`}
+                      title={t('addToWishlist')}
+                    >
+                      <Heart
+                        className={`w-3.5 h-3.5 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
+                      />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuickViewProductId(product.id);
+                      }}
+                      className="p-2 rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs"
+                      title={t('quickView')}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Content */}

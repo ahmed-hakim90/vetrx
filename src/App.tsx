@@ -8,6 +8,8 @@ import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { CartDrawer } from './components/common/CartDrawer';
+import { WishlistDrawer } from './components/common/WishlistDrawer';
+import { QuickViewModal } from './components/common/QuickViewModal';
 import { MobileNav } from './components/common/MobileNav';
 import { HomeScreen } from './components/home/HomeScreen';
 import { ProductListingScreen } from './components/plp/ProductListingScreen';
@@ -32,6 +34,12 @@ const MainContent: React.FC = () => {
 
       {/* Global Cart Slide-Over Drawer */}
       <CartDrawer />
+
+      {/* Global Wishlist Drawer */}
+      <WishlistDrawer />
+
+      {/* Quick View Modal */}
+      <QuickViewModal />
 
       {/* Global Footer */}
       <Footer />

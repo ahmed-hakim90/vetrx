@@ -42,6 +42,11 @@ interface StoreContextType {
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
+  clearWishlist: () => void;
+  isWishlistOpen: boolean;
+  setIsWishlistOpen: (open: boolean) => void;
+  quickViewProductId: string | null;
+  setQuickViewProductId: (id: string | null) => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   searchQuery: string;
@@ -92,6 +97,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
   ]);
   const [wishlist, setWishlist] = useState<string[]>(['prod-sony-wh1000xm5']);
+  const [isWishlistOpen, setIsWishlistOpen] = useState<boolean>(false);
+  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterState, setFilterState] = useState<FilterState>(initialFilterState);
@@ -231,6 +238,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const isInWishlist = (productId: string) => wishlist.includes(productId);
 
+  const clearWishlist = () => {
+    setWishlist([]);
+  };
+
   // Coupon handling
   const applyCoupon = (code: string) => {
     const cleanCode = code.trim().toUpperCase();
@@ -298,6 +309,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wishlist,
         toggleWishlist,
         isInWishlist,
+        clearWishlist,
+        isWishlistOpen,
+        setIsWishlistOpen,
+        quickViewProductId,
+        setQuickViewProductId,
         isCartOpen,
         setIsCartOpen,
         searchQuery,

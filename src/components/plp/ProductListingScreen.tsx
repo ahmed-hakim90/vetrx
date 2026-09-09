@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CheckCircle2,
   ShieldCheck,
+  Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { PRODUCTS, CATEGORIES } from '../../data/mockData';
@@ -29,6 +30,7 @@ export const ProductListingScreen: React.FC = () => {
     addToCart,
     toggleWishlist,
     isInWishlist,
+    setQuickViewProductId,
     navigateToProduct,
     setActiveScreen,
   } = useStore();
@@ -460,23 +462,36 @@ export const ProductListingScreen: React.FC = () => {
                         </span>
                       )}
 
-                      {/* Wishlist */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWishlist(product.id);
-                        }}
-                        className={`absolute top-3 right-3 rtl:right-auto rtl:left-3 p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
-                          inWish
-                            ? 'bg-rose-50 text-rose-500'
-                            : 'bg-white/80 text-slate-600 hover:text-rose-500 hover:bg-white'
-                        }`}
-                        title={t('addToWishlist')}
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
-                        />
-                      </button>
+                      {/* Action buttons (Wishlist & Quick View) */}
+                      <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3 flex flex-col gap-1.5 z-10">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(product.id);
+                          }}
+                          className={`p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
+                            inWish
+                              ? 'bg-rose-50 text-rose-500'
+                              : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
+                          }`}
+                          title={t('addToWishlist')}
+                        >
+                          <Heart
+                            className={`w-3.5 h-3.5 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
+                          />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setQuickViewProductId(product.id);
+                          }}
+                          className="p-2 rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs"
+                          title={t('quickView')}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
@@ -605,7 +620,7 @@ export const ProductListingScreen: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={(e) => handleQuickAdd(product, e)}
                           className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -616,11 +631,22 @@ export const ProductListingScreen: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setQuickViewProductId(product.id);
+                          }}
+                          className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                          title={t('quickView')}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             toggleWishlist(product.id);
                           }}
                           className={`p-2.5 rounded-xl border border-slate-200 transition-colors cursor-pointer ${
                             inWish ? 'bg-rose-50 text-rose-500 border-rose-200' : 'text-slate-500 hover:bg-slate-50'
                           }`}
+                          title={t('addToWishlist')}
                         >
                           <Heart className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`} />
                         </button>
@@ -639,42 +665,112 @@ export const ProductListingScreen: React.FC = () => {
         <div className="fixed inset-0 z-50 lg:hidden overflow-hidden">
           <div
             onClick={() => setMobileFiltersOpen(false)}
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
           />
-          <div className="fixed inset-y-0 right-0 rtl:right-auto rtl:left-0 max-w-full flex pl-10 rtl:pl-0 rtl:pr-10">
-            <div className="w-screen max-w-xs bg-white p-5 flex flex-col justify-between shadow-2xl">
-              <div className="space-y-6 overflow-y-auto">
+          <div className="fixed inset-y-0 right-0 rtl:right-auto rtl:left-0 max-w-full flex pl-0 sm:pl-10 rtl:pr-0 rtl:sm:pr-10">
+            <div className="w-screen max-w-xs sm:max-w-sm bg-white p-5 flex flex-col justify-between shadow-2xl">
+              <div className="space-y-5 overflow-y-auto pr-1">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                  <h3 className="font-bold text-sm text-slate-900 uppercase">
-                    {t('filters')}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-black text-sm text-slate-900 uppercase">
+                      {t('filters')}
+                    </h3>
+                  </div>
                   <button
                     onClick={() => setMobileFiltersOpen(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Brands */}
+                {/* Categories */}
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase">{t('brands')}</h4>
-                  <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    {t('shopByCategory')}
+                  </h4>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setFilterState((prev) => ({ ...prev, category: 'all' }))}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-start transition-colors ${
+                        filterState.category === 'all'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{t('categoriesMega')}</span>
+                      <span className="text-[11px] opacity-80">{PRODUCTS.length}</span>
+                    </button>
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setFilterState((prev) => ({ ...prev, category: cat.id }))}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-start transition-colors ${
+                          filterState.category === cat.id
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{cat.name[language]}</span>
+                        <span className="text-[11px] opacity-80">{cat.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price Range Slider */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    <span>{t('priceRange')}</span>
+                    <span className="text-blue-600 font-black">
+                      {formatPrice(filterState.maxPrice)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="100"
+                    max="15000"
+                    step="100"
+                    value={filterState.maxPrice}
+                    onChange={(e) =>
+                      setFilterState((prev) => ({
+                        ...prev,
+                        maxPrice: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full accent-blue-600 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                    <span>{formatPrice(0)}</span>
+                    <span>{formatPrice(15000)}</span>
+                  </div>
+                </div>
+
+                {/* Brands */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    {t('brands')}
+                  </h4>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {availableBrands.map((b) => (
-                      <label key={b} className="flex items-center gap-2 text-xs text-slate-700">
+                      <label
+                        key={b}
+                        className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-950"
+                      >
                         <input
                           type="checkbox"
                           checked={filterState.brands.includes(b)}
                           onChange={() => handleBrandToggle(b)}
-                          className="rounded text-blue-600"
+                          className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
                         />
-                        <span>{b}</span>
+                        <span className="font-medium">{b}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                {/* In Stock */}
+                {/* In Stock Only Switch */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                   <span className="text-xs font-bold text-slate-800">{t('inStockOnly')}</span>
                   <input
@@ -683,23 +779,51 @@ export const ProductListingScreen: React.FC = () => {
                     onChange={(e) =>
                       setFilterState((prev) => ({ ...prev, inStockOnly: e.target.checked }))
                     }
-                    className="rounded text-blue-600 w-4 h-4"
+                    className="rounded text-blue-600 w-4 h-4 cursor-pointer"
                   />
+                </div>
+
+                {/* Customer Rating */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                    {t('customerRating')}
+                  </span>
+                  <div className="space-y-1">
+                    {[4.5, 4.0, 3.5].map((ratingVal) => (
+                      <button
+                        key={ratingVal}
+                        onClick={() =>
+                          setFilterState((prev) => ({
+                            ...prev,
+                            minRating: prev.minRating === ratingVal ? 0 : ratingVal,
+                          }))
+                        }
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                          filterState.minRating === ratingVal
+                            ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{ratingVal} {t('andAbove')}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-slate-200 flex gap-2">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-800 rounded-xl text-xs font-bold"
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   {t('clearAll')}
                 </button>
                 <button
                   onClick={() => setMobileFiltersOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
-                  {t('applyPromo')}
+                  {t('showingResults')} ({filteredProducts.length})
                 </button>
               </div>
             </div>
