@@ -14,6 +14,7 @@ import { useStore } from '../../context/StoreContext';
 import { Currency } from '../../types/store';
 import { getCategoryIcon } from '../../core/catalog/categoryIcons';
 import { MenuDrawer } from '../navigation/MenuDrawer';
+import { MegaMenu } from '../navigation/MegaMenu';
 
 export const Header: React.FC = () => {
   const {
@@ -109,6 +110,16 @@ export const Header: React.FC = () => {
 
   const isHomeActive = location.pathname === '/';
   const isCategoryActive = (id: string) => location.pathname === `/category/${id}` || (location.pathname === '/products' && params.categorySlug === id);
+
+  // Helper to get subcategories for a category
+  const getSubcategoriesForCategory = (categoryId: string) => {
+    return categories.filter((c) => c.parentId === categoryId);
+  };
+
+  // Get full category object from categories array
+  const getCategoryObject = (categoryId: string) => {
+    return categories.find((c) => c.id === categoryId && !c.parentId);
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all duration-300">
@@ -397,8 +408,16 @@ export const Header: React.FC = () => {
             </button>
 
             {navCategories.map((cat) => {
-              const IconComponent = cat.icon;
-              return (
+              const fullCategory = getCategoryObject(cat.id);
+              const subcategories = getSubcategoriesForCategory(cat.id);
+
+              return fullCategory && subcategories.length > 0 ? (
+                <MegaMenu
+                  key={cat.id}
+                  category={fullCategory}
+                  subcategories={subcategories}
+                />
+              ) : (
                 <button
                   key={cat.id}
                   onClick={() => navigateToCategory(cat.id)}
@@ -406,7 +425,6 @@ export const Header: React.FC = () => {
                     isCategoryActive(cat.id) ? 'text-blue-600 bg-blue-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <IconComponent className="w-3.5 h-3.5 text-slate-400" />
                   <span>{cat.name}</span>
                 </button>
               );
