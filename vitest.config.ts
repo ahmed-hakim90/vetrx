@@ -17,6 +17,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Only this app's tests. wordpress/ ships its own suite written for
+    // Node's built-in runner (`node --test`), which vitest cannot collect.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

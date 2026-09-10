@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/((?!api/|_next/|_static/|[\\w-]+\\.\\w+).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_STORE_ID": {
+      "description": "Store ID: shams, voltix, apex, or lumina"
+    },
+    "VITE_PAYMENT_MODE": {
+      "description": "Payment mode: sandbox or live"
+    }
+  }
+}

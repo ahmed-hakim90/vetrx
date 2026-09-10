@@ -5,7 +5,7 @@ import { useStore } from '../../context/StoreContext';
 
 export interface BreadcrumbItem {
   label: string;
-  onClick?: () => void;
+  onClick?: (() => void) | React.MouseEventHandler<HTMLButtonElement>;
   active?: boolean;
 }
 

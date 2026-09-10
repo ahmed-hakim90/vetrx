@@ -1,124 +1,133 @@
-# Shams Store — pre-launch checklist
+# Shams Stores — pre-launch checklist
 
-Everything below has to be **real and confirmed by the business owner** before
-`shams` can serve actual customers. Until then the storefront runs in Demo
-Mode: the catalog is placeholder data, orders are stored in the browser only,
-and no payment is ever taken.
+**Business**: Shams Stores (شمس ستورز) — professional photography, video and
+audio equipment, Egypt.
+**Domain**: https://www.shams-stores.com
+**Config**: `src/config/clients/shams.config.ts`
 
-Verify current status at any time:
+✅ = confirmed by the business and in the config · ⚠️ = on record but not
+re-confirmed · ⬜ = still missing / not decided.
+
+Check status at any time:
 
 ```bash
-npm run verify:shams
+npm run verify:shams   # build + assert no other client's or market's terms leaked in
 ```
 
-That builds the Shams bundle and fails if it contains another client's brand
-names or another market's terminology. The runtime check
-(`getProductionReadinessIssues`, logged to the console in the browser) lists
-which items on this checklist are still outstanding.
+`getProductionReadinessIssues()` (src/core/launch/productionReadiness.ts)
+reports every ⚠️/⬜ item below as a launch blocker and logs them in the
+browser console on start-up.
 
 ---
 
-## 1. Brand and domain
+## 1. Identity and brand
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Final logo (SVG preferred) | `public/assets/clients/shams/logo.svg` | ⬜ placeholder |
-| Favicon / app icon | `public/assets/clients/shams/` + `favicon` in the config | ⬜ placeholder |
-| Product photography (replaces Unsplash placeholders) | `src/data/demo/shams/products.ts` → real catalog source | ⬜ placeholder |
-| Open Graph share image | `seo.ogImage` | ⬜ placeholder |
-| Production domain | `VITE_SITE_URL` + `seo.siteUrl` | ⬜ `shams-store.example` |
+| Item | Status |
+| --- | --- |
+| Trading name, bilingual display name | ✅ Shams Stores / شمس ستورز |
+| Business category | ✅ photo, video & audio equipment |
+| Production domain (`seo.siteUrl`) | ✅ www.shams-stores.com |
+| Tagline, hero copy, About text | ✅ supplied by the business |
+| Facebook / Instagram | ✅ linked |
+| **Registered legal name** (as on the commercial register) — needed for invoices and Organization schema | ⬜ `legalName` currently holds the trading name |
+| Commercial registration number (السجل التجاري) | ⬜ not provided |
+| Tax registration number (البطاقة الضريبية) | ⬜ not provided |
+| Final logo / favicon files | ⬜ placeholder SVG in `public/assets/clients/shams/` |
+| Hero and OG share image | ⬜ placeholder |
 
-## 2. Legal identity
+## 2. Contact and branches
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Registered legal name (as on the commercial register) | `legalName` | ⬜ `"Shams Store"` (working name) |
-| Commercial registration number (السجل التجاري) | invoice/footer copy once confirmed | ⬜ not provided |
-| Tax registration number (البطاقة الضريبية) | invoice/footer copy once confirmed | ⬜ not provided |
-| Whether e-invoicing (الفاتورة الإلكترونية) applies | backend integration | ⬜ undecided |
-| VAT treatment: is 14% correct, and are prices tax-inclusive? | `tax.vatPercent`, `tax.pricesIncludeTax` | ⬜ assumed 14%, prices exclusive |
+| Item | Status |
+| --- | --- |
+| Landline 02 2390 1870 / 02 2390 1860, mobile 010 1133 1666 | ✅ shown on /contact, dialable |
+| Support email info@shams-stores.com | ⚠️ on record, **not re-verified** — confirm it is monitored |
+| Downtown branch — 5 Sherif Street, Downtown, Cairo | ⚠️ address & numbers not re-confirmed by the owner |
+| Heliopolis branch — 24 Omar Ibn El-Khattab St, Ismailia Square | ⚠️ same |
+| Opening hours | ⬜ not provided (not displayed anywhere) |
+| WhatsApp number for support | ⬜ not provided (no WhatsApp UI is shown) |
+| Do the branches accept **in-store pickup** of online orders? | ⬜ `shipping.pickupEnabled: false` — pickup is not offered at checkout |
 
-## 3. Contact details
+## 3. Delivery — nothing is published yet
 
-Nothing here is currently published — the header, footer and `/contact` page
-hide these sections rather than show invented values.
+The storefront currently says delivery fees are **not published**, quotes no
+fee, and promises no delivery date. This is deliberate; it needs real answers:
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Support phone (+ display format) | `contact.supportPhone`, `contact.supportPhoneDisplay` | ⬜ not provided |
-| Support email | `contact.supportEmail` | ⬜ not provided |
-| WhatsApp number (if used for support) | `contact.whatsapp` | ⬜ not provided |
-| Physical address(es) / branches | `addresses[]` | ⬜ empty |
-| Support hours | contact page copy | ⬜ not provided |
+| Item | Status |
+| --- | --- |
+| Which governorates do you deliver to? (`shipping.zones`, ids from `src/data/egyptGovernorates.ts`) | ⬜ empty |
+| Fee per governorate / weight / method (`shipping.standardFee` or a real rate table) | ⬜ unset — checkout shows "—" |
+| Free-shipping threshold, if any | ⬜ unset — no progress bar shown |
+| Order processing and delivery times (`shipping.etaConfirmed`) | ⬜ false — no ETA anywhere |
+| Express delivery: offered? at what price? | ⬜ `expressDeliveryEnabled: false` |
+| Courier / shipping company | ⬜ none |
+| Who pays return shipping (`returnShippingPaidBy`) | ⬜ not decided |
+| Handling of fragile/high-value equipment in transit | ⬜ not decided |
 
-> Pickup-from-branch at checkout only appears once `addresses[]` contains at
-> least one confirmed branch.
+## 4. Tax
 
-## 4. Delivery
+| Item | Status |
+| --- | --- |
+| Egypt statutory VAT rate (reference only) | ✅ 14% recorded |
+| **Is the business VAT-registered and charging VAT?** (`tax.vatApplied`) | ⬜ unknown — **no VAT is charged or displayed** until confirmed |
+| Are catalog prices VAT-inclusive or exclusive? (`pricesIncludeTax`) | ⬜ unknown |
+| Does e-invoicing (الفاتورة الإلكترونية) apply? | ⬜ unknown |
+| Does e-receipt (الإيصال الإلكتروني) apply? | ⬜ unknown |
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Which governorates are actually served | `shipping.zones` (use ids from `src/data/egyptGovernorates.ts`) | ⬜ Cairo/Giza/Alexandria assumed |
-| Shipping fee table (per governorate / weight / method) | `MockCommerceProvider.calculateShipping` → real provider | ⬜ flat 60 EGP assumed |
-| Free-shipping threshold | `shipping.freeShippingThreshold` | ⬜ 1500 EGP assumed |
-| Order processing / lead times | `shipping.etaConfirmed` + provider ETA | ⬜ `etaConfirmed: false` (no ETA shown) |
-| Express delivery: offered? at what price? | `featureFlags.expressDeliveryEnabled`, `shipping.expressFee` | ⬜ disabled |
-| Shipping company / courier contract | backend integration | ⬜ not signed |
-| Who pays return shipping | returns policy copy | ⬜ not decided |
+## 5. Payments
 
-Until a courier commitment exists, checkout deliberately shows
-"Shipping is calculated once you choose your governorate" and never a promised
-delivery date.
+| Item | Status |
+| --- | --- |
+| Cash on Delivery — historically accepted | ⚠️ `confirmed: false`: offered in Demo Mode only, **not confirmed as currently accepted** |
+| COD fee, cash-handling limits, courier settlement | ⬜ not provided |
+| Card payment — referenced in the terms | ⬜ `enabled: false`, no gateway integrated, not offered in the UI |
+| Payment gateway contract + merchant account (Egypt) | ⬜ none |
+| Hosted checkout / tokenized card fields (raw card fields must never be used in production) | ⬜ not implemented |
+| Wallets / InstaPay / installments | ⬜ not offered, not wired |
+| Order-number prefix `SHAMS-` acceptable? | ⚠️ assumed from the provided config |
+| Refund process and who may issue refunds | ⬜ not defined |
 
-## 5. Policies (legal review required)
+## 6. Catalog
 
-All five documents currently exist as **clearly-labelled drafts** and render a
-visible "draft content" notice. Replace the body text and flip
-`status: 'draft'` → `'confirmed'` in `src/config/clients/shams.config.ts`.
+The 13 categories supplied by the business are in place. The **products are
+placeholder demo data**: representative equipment names with **made-up prices
+and stock**, marked `isDemo: true`, no reviews, stock photography.
 
-| Document | Config path | Status |
-| --- | --- | --- |
-| About / company story | `content.about` | ⬜ draft |
-| Shipping & delivery info | `content.shippingInfo` | ⬜ draft |
-| Returns & exchange policy (window, conditions, who pays) | `content.returnsInfo` + `policies.returnPolicy` | ⬜ draft |
-| Warranty policy | `content.warrantyInfo` + `policies.warrantyPolicy` | ⬜ draft |
-| Privacy policy (**must** be lawyer-reviewed before collecting customer data) | `content.privacyPolicy` | ⬜ draft |
-| Terms of service (**must** be lawyer-reviewed) | `content.termsOfService` | ⬜ draft |
-| FAQ answers confirmed by the business | `content.faq` | ⬜ hedged placeholders |
+| Item | Status |
+| --- | --- |
+| Category tree (cameras, lenses, video production, lighting, audio, tripods & stabilizers, microphones, bags & cases, memory cards, accessories, darkroom, film, offers) | ✅ |
+| Real product list, prices in EGP, stock levels | ⬜ demo data — replace before launch |
+| Product photography with usage rights | ⬜ Unsplash placeholders |
+| Who maintains stock/prices, and where | ⬜ not decided |
+| What "Current Offers" contains, and how it is kept current | ⬜ demo bundles |
+| Per-product warranty backing (manufacturer vs local distributor) | ⬜ generic note only |
+| Will customer reviews be collected? | ⬜ none shipped (`reviews: []` everywhere) |
 
-## 6. Catalog and inventory
+## 7. Policies (legal review required)
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Real product list (names, descriptions, specs) | commerce provider | ⬜ 12 demo products |
-| Real prices in EGP | commerce provider | ⬜ demo prices |
-| Real stock levels, and who updates them | commerce provider | ⬜ demo values |
-| Product images with usage rights | product data | ⬜ Unsplash placeholders |
-| Whether warranty claims per product are backed by a supplier | `product.warranty` | ⬜ generic text |
-| Whether customer reviews will be collected (and from where) | `featureFlags.reviewsEnabled` | ⬜ no reviews shipped |
+`content.about` is confirmed. The rest render as **clearly-labelled drafts**
+with a visible notice; replace the text and flip `status: 'draft'` →
+`'confirmed'`.
 
-Every demo product carries `isDemo: true` and empty `reviews` — no invented
-customer feedback is shipped, and no demo review is ever emitted into
-structured data.
+| Document | Status |
+| --- | --- |
+| About | ✅ confirmed |
+| FAQ | ⚠️ answers written conservatively from confirmed facts only — have the business approve them |
+| Shipping & delivery info | ⬜ draft |
+| Returns & exchange policy (window, conditions, who pays) | ⬜ draft |
+| Warranty policy | ⬜ draft |
+| Privacy policy — **must** be lawyer-reviewed before collecting customer data | ⬜ draft |
+| Terms of service — **must** be lawyer-reviewed | ⬜ draft |
 
-## 7. Backend and payments
+## 8. Backend and integration
 
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| WooCommerce (or other) store + admin access | backend service | ⬜ none |
-| Backend service to hold API credentials (never in `VITE_*`) | new service | ⬜ not built |
-| `WooCommerceProvider` implementing `CommerceProvider` | `src/core/commerce/` | ⬜ contract documented only |
-| Payment gateway contract (Egypt) and merchant account | gateway + backend | ⬜ none |
-| Hosted checkout / tokenized card fields (never raw card fields in this form) | `PaymentProvider` implementation | ⬜ mock only |
-| Cash on Delivery: fee, cash-handling rules, courier settlement | provider + policy copy | ⬜ COD shown without a fee |
-| Wallets / InstaPay / installments — offered at all? | `paymentMethods` + real integration | ⬜ not offered, not wired |
-| Order-number scheme (is `SHM-…` acceptable?) | `orderNumberPrefix` | ⬜ assumed |
-| Refund process and who can issue refunds | backend + policy | ⬜ not decided |
+| Item | Status |
+| --- | --- |
+| WooCommerce (or other) store + admin access | ⬜ none |
+| Backend service holding API credentials (never in `VITE_*`) | ⬜ not built |
+| `WooCommerceProvider` implementing `CommerceProvider` | ⬜ contract documented only |
+| Where orders land, and who is notified | ⬜ orders currently live in the browser session only |
 
-No payment provider is named anywhere in the storefront until it is actually
-integrated.
-
-## 8. Operations and messaging
+## 9. Operations and messaging
 
 | Item | Status |
 | --- | --- |
@@ -127,36 +136,28 @@ integrated.
 | Out-of-stock / partial-fulfilment handling | ⬜ not defined |
 | Complaint escalation path | ⬜ not defined |
 
-## 9. Analytics, consent and security
+## 10. Analytics, consent, security
 
 | Item | Status |
 | --- | --- |
-| Analytics tool, and what may legally be tracked | ⬜ none installed |
+| Analytics tool and what may lawfully be tracked | ⬜ none installed |
 | Cookie/consent banner requirement decision | ⬜ not decided |
-| Content-Security-Policy headers for the hosting platform | ⬜ documented, not deployed |
-| HTTPS + HSTS at the hosting layer | ⬜ hosting-dependent |
-| Confirmation that no secret ever lands in a `VITE_*` variable | ✅ enforced by review + docs |
-
-## 10. Social accounts
-
-| Item | Where it goes | Status |
-| --- | --- | --- |
-| Facebook / Instagram / TikTok / X / YouTube URLs | `socialLinks` | ⬜ empty (omitted from UI and from Organization schema) |
+| Content-Security-Policy headers at the hosting layer | ⬜ documented, not deployed |
+| HTTPS + HSTS | ⬜ hosting-dependent |
+| No secret in any `VITE_*` variable | ✅ enforced by review + docs |
 
 ---
 
 ## Launch gate
 
-Do not launch while any of the following is still true:
+Do not launch while any of these is still true:
 
+- [ ] `tax.vatApplied` is false (tax status unknown)
+- [ ] `shipping.standardFee` is unset or `shipping.zones` is empty
+- [ ] `shipping.etaConfirmed` is false
+- [ ] any offered payment method has `confirmed: false`
 - [ ] `content.privacyPolicy` or `content.termsOfService` is `status: 'draft'`
-- [ ] `commerce.provider` is still `'mock'`
-- [ ] `contact` has neither a phone nor an email
-- [ ] prices, stock or shipping fees are still demo values
-- [ ] product images are still placeholders
-- [ ] no payment gateway is integrated through a backend
-
-`getProductionReadinessIssues()` (src/core/launch/productionReadiness.ts)
-checks exactly these and is safe to wire into a release pipeline as a hard
-gate — it is intentionally non-blocking for local builds so staging a
-not-yet-ready client stays possible.
+- [ ] `commerce.provider` is still `'mock'` (demo catalog, browser-only orders)
+- [ ] the support email or either branch address is still `needs-confirmation`
+- [ ] product prices, stock or images are still placeholders
+- [ ] `legalName` still holds the trading name rather than the registered name

@@ -2,6 +2,8 @@ export const translations = {
   en: {
     // Accessibility
     skipToContent: 'Skip to main content',
+    back: 'Back',
+    navigation: 'Navigation',
 
     // Header & Meta
     trackOrder: 'Track Order',
@@ -76,9 +78,24 @@ export const translations = {
     tabOnSale: 'Special Offers',
     viewMore: 'View All Products',
 
-    // Brands
+    // Brands & Categories
     authorizedBrands: 'Official Authorized Partner Brands',
-    
+    categories: 'Categories',
+    browseByCategory: 'Browse by Category',
+    categoriesDescription: 'Explore our complete range of professional equipment organized by category',
+    shopBySubcategory: 'Shop by Subcategory',
+    noProductsInCategory: 'No products found in this category.',
+    noCategoriesAvailable: 'No categories available at this time.',
+    brands: 'Brands',
+    shopByBrand: 'Shop by Brand',
+    brandsDescription: 'Discover products from all our available brands',
+    searchBrands: 'Search brands...',
+    noBrandsFound: 'No brands match your search.',
+    showingBrands: 'Showing {count} of {total} brands',
+    shopAll: 'Shop All Products',
+    favorites: 'My Favorites',
+    products: 'products',
+
     // PLP (Product Listing Page)
     allProductsTitle: 'All Electronics & Gadgets',
     showingResults: 'Showing',
@@ -88,7 +105,6 @@ export const translations = {
     filters: 'Filters',
     clearAll: 'Clear All',
     priceRange: 'Price Range',
-    brands: 'Brands',
     customerRating: 'Customer Rating',
     andAbove: '& above',
     availability: 'Availability',
@@ -252,6 +268,8 @@ export const translations = {
     navPrivacyPolicy: 'Privacy Policy',
     navTermsOfService: 'Terms of Service',
     draftContentNotice: 'Draft content — pending final review, not yet a confirmed policy.',
+    contactReachUs: 'Reach us',
+    contactBranches: 'Branches',
     contactNoInfoTitle: 'Contact details coming soon',
     contactNoInfoDesc: 'This store has not published contact details yet.',
     infoPageNotAvailable: 'This page has not been published yet.',
@@ -276,6 +294,9 @@ export const translations = {
     cartValidationFailed: 'Some items in your cart changed. Please review before continuing.',
     optionalLabel: 'optional',
     shippingPendingAddress: 'Shipping is calculated once you choose your governorate.',
+    shippingNotPublished: 'Delivery fees are not published for this store yet.',
+    etaNotPublished: 'Delivery times are not published yet.',
+    demoCatalogNotice: 'Demo Mode: products, prices and stock on this build are placeholder data.',
     etaConfirmedOnShipping: 'The delivery date will be confirmed when your order ships.',
 
     // Footer
@@ -296,6 +317,8 @@ export const translations = {
   ar: {
     // إتاحة الوصول
     skipToContent: 'تخطَّ إلى المحتوى الرئيسي',
+    back: 'رجوع',
+    navigation: 'التنقل والقائمة',
 
     // Header & Meta
     trackOrder: 'تتبع طلبك',
@@ -370,9 +393,24 @@ export const translations = {
     tabOnSale: 'عروض وتخفيضات',
     viewMore: 'عرض كافة المنتجات',
 
-    // Brands
+    // Brands & Categories
     authorizedBrands: 'العلامات التجارية والشركاء الرسميون المعتمدون',
-    
+    categories: 'الفئات والأقسام',
+    browseByCategory: 'تصفح حسب الفئة',
+    categoriesDescription: 'استكشف مجموعتنا الكاملة من معدات التصوير الاحترافية المنظمة حسب الفئة',
+    shopBySubcategory: 'تسوق حسب الفئة الفرعية',
+    noProductsInCategory: 'لم يتم العثور على منتجات في هذه الفئة.',
+    noCategoriesAvailable: 'لا توجد فئات متاحة في الوقت الحالي.',
+    brands: 'الماركات والعلامات',
+    shopByBrand: 'تسوق حسب الماركة',
+    brandsDescription: 'اكتشف منتجات من جميع العلامات التجارية المتاحة لدينا',
+    searchBrands: 'ابحث عن ماركة...',
+    noBrandsFound: 'لم يتم العثور على ماركات تطابق البحث.',
+    showingBrands: 'عرض {count} من {total} ماركة',
+    shopAll: 'تسوق جميع المنتجات',
+    favorites: 'المفضلة',
+    products: 'منتجات',
+
     // PLP (Product Listing Page)
     allProductsTitle: 'كافة الإلكترونيات والأجهزة الذكية',
     showingResults: 'عرض',
@@ -382,7 +420,6 @@ export const translations = {
     filters: 'الفلاتر',
     clearAll: 'إعادة ضبط الكل',
     priceRange: 'نطاق السعر',
-    brands: 'الماركات والعلامات',
     customerRating: 'تقييم العملاء',
     andAbove: 'فما فوق',
     availability: 'حالة التوفر',
@@ -546,6 +583,8 @@ export const translations = {
     navPrivacyPolicy: 'سياسة الخصوصية',
     navTermsOfService: 'الشروط والأحكام',
     draftContentNotice: 'محتوى مبدئي لسه بيتراجع — مش سياسة معتمدة نهائيًا لحد دلوقتي.',
+    contactReachUs: 'تواصل معنا',
+    contactBranches: 'الفروع',
     contactNoInfoTitle: 'بيانات التواصل هتتوفر قريب',
     contactNoInfoDesc: 'المتجر ده لسه منشرش بيانات تواصل رسمية.',
     infoPageNotAvailable: 'الصفحة دي لسه مش متاحة.',
@@ -570,6 +609,9 @@ export const translations = {
     cartValidationFailed: 'بعض المنتجات في سلتك اتغيرت. راجع السلة قبل ما تكمل.',
     optionalLabel: 'اختياري',
     shippingPendingAddress: 'رسوم الشحن بتتحدد بعد اختيار المحافظة.',
+    shippingNotPublished: 'رسوم التوصيل لسه مش معلنة.',
+    etaNotPublished: 'مواعيد التوصيل لسه مش معلنة.',
+    demoCatalogNotice: 'وضع العرض التجريبي: المنتجات والأسعار والمخزون في النسخة دي بيانات مؤقتة.',
     etaConfirmedOnShipping: 'موعد التوصيل هيتأكد وقت خروج الطلب للتوصيل.',
 
     // Footer

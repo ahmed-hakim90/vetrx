@@ -17,9 +17,25 @@ describe.each(Object.keys(clientRegistry))('%s config ↔ catalog links', (clien
   const client = clientRegistry[clientId];
   const { products, categories } = catalogFor(clientId);
 
-  it('hero secondary CTA points at a product this client actually sells', () => {
-    const slug = client.home.heroSecondaryCtaProductSlug;
-    expect(products.some((p) => p.id === slug), `${clientId}: unknown product "${slug}"`).toBe(true);
+  it('hero secondary CTA points at a product or category this client actually has', () => {
+    const productSlug = client.home.heroSecondaryCtaProductSlug;
+    const categorySlug = client.home.heroSecondaryCtaCategorySlug;
+
+    // The schema guarantees exactly one of the two is set.
+    expect([productSlug, categorySlug].filter(Boolean)).toHaveLength(1);
+
+    if (productSlug) {
+      expect(products.some((p) => p.id === productSlug), `${clientId}: unknown product "${productSlug}"`).toBe(true);
+    } else {
+      expect(
+        categories.some((c) => c.id === categorySlug),
+        `${clientId}: unknown category "${categorySlug}"`
+      ).toBe(true);
+      expect(
+        products.some((p) => p.category === categorySlug),
+        `${clientId}: category "${categorySlug}" is empty`
+      ).toBe(true);
+    }
   });
 
   it('hero primary CTA points at "all" or a real category', () => {

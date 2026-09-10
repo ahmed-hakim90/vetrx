@@ -24,9 +24,12 @@ export const CartPage: React.FC = () => {
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
   const ArrowIcon = language === 'ar' ? ArrowLeft : ArrowRight;
+  // A store with no published free-shipping threshold gets no progress bar —
+  // rather than a bar measured against a number nobody set.
   const freeShippingThreshold = client.shipping.freeShippingThreshold;
-  const amountNeeded = Math.max(0, freeShippingThreshold - cartSubtotal);
-  const progressPercent = Math.min(100, (cartSubtotal / Math.max(1, freeShippingThreshold)) * 100);
+  const amountNeeded = freeShippingThreshold === undefined ? 0 : Math.max(0, freeShippingThreshold - cartSubtotal);
+  const progressPercent =
+    freeShippingThreshold === undefined ? 0 : Math.min(100, (cartSubtotal / Math.max(1, freeShippingThreshold)) * 100);
 
   // The stored cart price is never trusted as final — re-check current
   // price/stock through the commerce provider whenever the cart is opened.
@@ -151,18 +154,20 @@ export const CartPage: React.FC = () => {
                 {t('orderSummary')}
               </h3>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-700 font-semibold">
-                  <span>
-                    {amountNeeded > 0
-                      ? t('freeShippingThresholdNotice', { amount: formatPrice(amountNeeded) })
-                      : t('freeShippingUnlocked')}
-                  </span>
+              {freeShippingThreshold !== undefined && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                    <span>
+                      {amountNeeded > 0
+                        ? t('freeShippingThresholdNotice', { amount: formatPrice(amountNeeded) })
+                        : t('freeShippingUnlocked')}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                  </div>
                 </div>
-                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
-                </div>
-              </div>
+              )}
 
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex justify-between">

@@ -15,11 +15,24 @@ export interface LocalizedString {
 
 export interface Category {
   id: string;
+  slug: string;
   name: LocalizedString;
-  icon: string;
-  count: number;
-  image: string;
+  description?: LocalizedString;
+  icon?: string;
+  image?: string;
+  parentId?: string; // Parent category ID for hierarchy
+  count: number; // Product count in this category and descendants
   featured?: boolean;
+  displayOrder?: number;
+}
+
+export interface Brand {
+  id: string;
+  slug: string;
+  name: string;
+  logo?: string;
+  description?: LocalizedString;
+  count: number; // Product count for this brand
 }
 
 export interface ProductVariant {
@@ -91,6 +104,51 @@ export interface CartItem {
   selectedStorage?: ProductVariant;
   unitPrice: number;
   totalPrice: number;
+}
+
+// Facet option (e.g., "Canon" under brand, or "In Stock" under availability)
+export interface FacetOption {
+  value: string; // Facet value ID
+  label: LocalizedString | string; // Display label
+  count?: number; // Number of matching products (optional for unsupported backends)
+}
+
+// A single facet (e.g., Brand, Price Range, Availability)
+export interface Facet {
+  id: string; // Facet ID (e.g., "pa_brand", "price", "availability")
+  name: LocalizedString | string; // Display name
+  type: 'checkbox' | 'radio' | 'price-range' | 'color' | 'size' | 'custom';
+  options: FacetOption[];
+  activeValues?: string[]; // Currently selected values
+}
+
+// Query parameters for catalog discovery
+export interface CatalogQuery {
+  categorySlug?: string;
+  brandSlugs?: string[];
+  searchQuery?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  facets?: Record<string, string[]>; // facetId -> selected values
+  sortBy?: 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest';
+  page?: number;
+  perPage?: number;
+  inStockOnly?: boolean;
+}
+
+// Results of a catalog query
+export interface CatalogQueryResult {
+  products: Product[];
+  facets: Facet[];
+  pagination: {
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+  };
+  // Optional category/brand context
+  currentCategory?: Category;
+  currentBrand?: Brand;
 }
 
 export interface FilterState {

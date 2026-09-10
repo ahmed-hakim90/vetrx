@@ -30,6 +30,10 @@ const OrderConfirmationScreen = lazy(() =>
   import('./components/checkout/OrderConfirmationScreen').then((m) => ({ default: m.OrderConfirmationScreen }))
 );
 const ContactPage = lazy(() => import('./components/info/ContactPage').then((m) => ({ default: m.ContactPage })));
+const CategoriesPage = lazy(() => import('./components/catalog/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
+const CategoryPage = lazy(() => import('./components/catalog/CategoryPage').then((m) => ({ default: m.CategoryPage })));
+const BrandsPage = lazy(() => import('./components/catalog/BrandsPage').then((m) => ({ default: m.BrandsPage })));
+const BrandPage = lazy(() => import('./components/catalog/BrandPage').then((m) => ({ default: m.BrandPage })));
 
 const About = lazy(() => import('./components/info/InfoPage').then((m) => ({ default: () => <m.InfoPage docKey="about" titleKey="navAbout" /> })));
 const Faq = lazy(() => import('./components/info/InfoPage').then((m) => ({ default: m.FaqPage })));
@@ -58,6 +62,43 @@ function PageFallback() {
   );
 }
 
+// Dev-only: this build's catalog, prices and stock are placeholder data, and
+// the store now carries a real brand identity — so say so while developing
+// and reviewing. Never rendered in a production build (see README: a
+// production deployment must not carry a "demo" banner; it must carry real
+// data instead).
+const DemoCatalogNotice: React.FC = () => {
+  const { client, t } = useStore();
+  if (!import.meta.env.DEV || client.commerce.provider !== 'mock') return null;
+
+  return (
+    <div role="status" className="bg-amber-100 text-amber-950 text-xs font-semibold px-4 py-2 text-center">
+      {t('demoCatalogNotice')}
+    </div>
+  );
+};
+
+// Wrappers to pass store data to new pages
+const CategoriesPageWrapper: React.FC = () => {
+  const { categories } = useStore();
+  return <CategoriesPage categories={categories} />;
+};
+
+const CategoryPageWrapper: React.FC = () => {
+  const { categories, products } = useStore();
+  return <CategoryPage categories={categories} products={products} />;
+};
+
+const BrandsPageWrapper: React.FC = () => {
+  const { products } = useStore();
+  return <BrandsPage products={products} />;
+};
+
+const BrandPageWrapper: React.FC = () => {
+  const { products } = useStore();
+  return <BrandPage products={products} />;
+};
+
 const MainContent: React.FC = () => {
   const { t } = useStore();
 
@@ -72,6 +113,7 @@ const MainContent: React.FC = () => {
 
       <SEOManager />
       <ScrollToTop />
+      <DemoCatalogNotice />
       <Header />
 
       <main id="main-content" className="flex-1">
@@ -79,7 +121,10 @@ const MainContent: React.FC = () => {
           <Routes>
             <Route path="/" element={<HomeScreen />} />
             <Route path="/products" element={<ProductListingScreen />} />
-            <Route path="/category/:categorySlug" element={<ProductListingScreen />} />
+            <Route path="/categories" element={<CategoriesPageWrapper />} />
+            <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
+            <Route path="/brands" element={<BrandsPageWrapper />} />
+            <Route path="/brand/:brandSlug" element={<BrandPageWrapper />} />
             <Route path="/search" element={<ProductListingScreen />} />
             <Route path="/product/:productSlug" element={<ProductDetailScreen />} />
             <Route path="/cart" element={<CartPage />} />

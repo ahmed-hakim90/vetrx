@@ -35,7 +35,7 @@ describe('MockCommerceProvider — catalog', () => {
   });
 
   it('finds products by title or brand, and nothing for a no-results query', async () => {
-    expect((await provider.searchProducts(CLIENT, 'JBL')).length).toBeGreaterThan(0);
+    expect((await provider.searchProducts(CLIENT, 'canon')).length).toBeGreaterThan(0);
     expect(await provider.searchProducts(CLIENT, 'zzzzzzz-no-such-thing')).toEqual([]);
   });
 
@@ -46,13 +46,13 @@ describe('MockCommerceProvider — catalog', () => {
 
 describe('MockCommerceProvider — cart validation (never trusts stored prices)', () => {
   it('corrects a cart line whose stored unit price is stale', async () => {
-    const stale = cartItemFor('prod-shams-jbl-tune-510bt', { unitPrice: 1, totalPrice: 1 });
+    const stale = cartItemFor('shams-canon-eos-r6-ii', { unitPrice: 1, totalPrice: 1 });
     const result = await provider.validateCart(CLIENT, [stale]);
 
     expect(result.valid).toBe(false);
     expect(result.issues[0].reason).toBe('price_changed');
-    expect(result.items[0].unitPrice).toBe(1299);
-    expect(result.items[0].totalPrice).toBe(1299);
+    expect(result.items[0].unitPrice).toBe(89900);
+    expect(result.items[0].totalPrice).toBe(89900);
   });
 
   it('drops an out-of-stock line and reports why', async () => {
@@ -74,7 +74,7 @@ describe('MockCommerceProvider — cart validation (never trusts stored prices)'
   });
 
   it('reports a product that no longer exists as removed', async () => {
-    const ghost = cartItemFor('prod-shams-jbl-tune-510bt');
+    const ghost = cartItemFor('shams-canon-eos-r6-ii');
     ghost.product = { ...ghost.product, id: 'deleted-product' };
     const result = await provider.validateCart(CLIENT, [ghost]);
 
@@ -84,27 +84,23 @@ describe('MockCommerceProvider — cart validation (never trusts stored prices)'
 });
 
 describe('MockCommerceProvider — Egypt shipping, tax and totals', () => {
-  it('quotes no fee and no ETA until a governorate is chosen', async () => {
+  it('quotes nothing until a governorate is chosen', async () => {
     const result = await provider.calculateShipping(CLIENT, { method: 'standard', subtotal: 500 });
+    expect(result.feeQuoted).toBe(false);
     expect(result.fee).toBe(0);
     expect(result.etaMessage).toBeNull();
   });
 
-  it('charges the configured standard fee below the free-shipping threshold', async () => {
+  it('still refuses to quote a fee once a governorate is chosen, because no rate is published', async () => {
+    // Shams has no agreed courier rate yet: `standardFee` is intentionally
+    // unset, so the provider must report "not quoted" rather than 0 — a 0
+    // would render as free delivery, which nobody promised.
     const result = await provider.calculateShipping(CLIENT, {
       governorateId: 'giza',
       method: 'standard',
       subtotal: 1299,
     });
-    expect(result.fee).toBe(60);
-  });
-
-  it('waives the fee at or above the free-shipping threshold', async () => {
-    const result = await provider.calculateShipping(CLIENT, {
-      governorateId: 'cairo',
-      method: 'standard',
-      subtotal: 2499,
-    });
+    expect(result.feeQuoted).toBe(false);
     expect(result.fee).toBe(0);
   });
 
@@ -123,9 +119,13 @@ describe('MockCommerceProvider — Egypt shipping, tax and totals', () => {
     ).rejects.toBeInstanceOf(CommerceError);
   });
 
-  it('applies the configured Egyptian VAT rate', async () => {
+  it('charges no tax while VAT registration is unconfirmed', async () => {
+    // tax.vatApplied is false for Shams: the statutory 14% is known, but
+    // whether this business collects it is not — so nothing is charged and
+    // the UI hides the row entirely.
     const result = await provider.calculateTaxes(CLIENT, 1000);
-    expect(result.amount).toBe(140);
+    expect(result.applied).toBe(false);
+    expect(result.amount).toBe(0);
     expect(result.label.en).toContain('14%');
   });
 
@@ -185,19 +185,19 @@ describe('MockCommerceProvider — order creation', () => {
   });
 
   it('creates an order with a provider-generated id using the client’s prefix', async () => {
-    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('prod-shams-jbl-tune-510bt')]));
+    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('shams-canon-eos-r6-ii')]));
 
-    expect(order.orderId.startsWith('SHM-')).toBe(true);
+    expect(order.orderId.startsWith('SHAMS-')).toBe(true);
     expect(order.total).toBe(1541);
     expect(order.status).toBe('confirmed');
     expect(order.shippingAddress.governorateId).toBe('cairo');
   });
 
   it('can read the order back by id, and returns undefined for an unknown id', async () => {
-    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('prod-shams-jbl-tune-510bt')]));
+    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('shams-canon-eos-r6-ii')]));
 
     expect((await provider.getOrder(CLIENT, order.orderId))?.orderId).toBe(order.orderId);
-    expect(await provider.getOrder(CLIENT, 'SHM-NOPE')).toBeUndefined();
+    expect(await provider.getOrder(CLIENT, 'SHAMS-NOPE')).toBeUndefined();
   });
 
   it('refuses to create an order for an out-of-stock item', async () => {
@@ -215,7 +215,7 @@ describe('MockCommerceProvider — order creation', () => {
   });
 
   it('leaves estimatedDelivery empty while the client has no confirmed courier ETA', async () => {
-    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('prod-shams-jbl-tune-510bt')]));
+    const order = await provider.createOrder(CLIENT, orderRequest([cartItemFor('shams-canon-eos-r6-ii')]));
     expect(order.estimatedDelivery).toBe('');
   });
 });

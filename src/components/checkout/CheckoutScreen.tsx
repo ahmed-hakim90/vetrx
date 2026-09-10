@@ -265,9 +265,13 @@ function GulfCheckoutForm() {
       id: 'standard' as const,
       title: t('standardDelivery'),
       desc: t('standardDeliveryDesc'),
-      fee: cartSubtotal > client.shipping.freeShippingThreshold ? 0 : client.shipping.standardFee,
+      fee:
+        client.shipping.freeShippingThreshold !== undefined &&
+        cartSubtotal > client.shipping.freeShippingThreshold
+          ? 0
+          : client.shipping.standardFee ?? 0,
     },
-    { id: 'express' as const, title: t('expressDelivery'), desc: t('expressDeliveryDesc'), fee: client.shipping.expressFee },
+    { id: 'express' as const, title: t('expressDelivery'), desc: t('expressDeliveryDesc'), fee: client.shipping.expressFee ?? 0 },
     ...(client.shipping.sameDayFee !== undefined
       ? [{ id: 'same-day' as const, title: t('sameDayDelivery'), desc: t('sameDayDeliveryDesc'), fee: client.shipping.sameDayFee }]
       : []),
@@ -276,7 +280,7 @@ function GulfCheckoutForm() {
   const deliveryFee = deliveryOptions.find((d) => d.id === deliveryMethod)?.fee ?? 0;
   const discountAmount = appliedCoupon ? (cartSubtotal * appliedCoupon.discountPercent) / 100 : 0;
   const taxableSubtotal = Math.max(0, cartSubtotal - discountAmount);
-  const vatTax = Math.round((taxableSubtotal * client.tax.vatPercent) / 100);
+  const vatTax = client.tax.vatApplied ? Math.round((taxableSubtotal * client.tax.vatPercent) / 100) : 0;
   const finalTotal = taxableSubtotal + deliveryFee + vatTax;
 
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -521,8 +525,9 @@ function GulfCheckoutForm() {
           discountAmount={discountAmount}
           appliedCoupon={appliedCoupon}
           deliveryFee={deliveryFee}
+          shippingFeeQuoted
           etaMessage={null}
-          tax={vatTax}
+          tax={client.tax.vatApplied ? vatTax : null}
           taxLabel={client.tax.vatLabel[language]}
           finalTotal={finalTotal}
           submitState={submitState}
@@ -558,12 +563,13 @@ function EgyptCheckoutForm() {
   const [couponFeedback, setCouponFeedback] = useState<{ success: boolean; message: string } | null>(null);
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'failed'>('idle');
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [shipping, setShipping] = useState<{ fee: number; etaMessage: { en: string; ar: string } | null; loading: boolean }>({
-    fee: 0,
-    etaMessage: null,
-    loading: false,
-  });
-  const [taxAmount, setTaxAmount] = useState(0);
+  const [shipping, setShipping] = useState<{
+    fee: number;
+    feeQuoted: boolean;
+    etaMessage: { en: string; ar: string } | null;
+    loading: boolean;
+  }>({ fee: 0, feeQuoted: false, etaMessage: null, loading: false });
+  const [tax, setTax] = useState<{ amount: number; applied: boolean }>({ amount: 0, applied: false });
 
   const enabledPaymentMethods = client.paymentMethods.filter((p) => p.enabled);
   const hasPickupBranches = client.addresses.length > 0;
@@ -626,10 +632,12 @@ function EgyptCheckoutForm() {
         subtotal: cartSubtotal,
       })
       .then((result) => {
-        if (!cancelled) setShipping({ fee: result.fee, etaMessage: result.etaMessage, loading: false });
+        if (!cancelled) {
+          setShipping({ fee: result.fee, feeQuoted: result.feeQuoted, etaMessage: result.etaMessage, loading: false });
+        }
       })
       .catch(() => {
-        if (!cancelled) setShipping({ fee: 0, etaMessage: null, loading: false });
+        if (!cancelled) setShipping({ fee: 0, feeQuoted: false, etaMessage: null, loading: false });
       });
     return () => {
       cancelled = true;
@@ -642,14 +650,14 @@ function EgyptCheckoutForm() {
   useEffect(() => {
     let cancelled = false;
     mockCommerceProvider.calculateTaxes(client.id, taxableSubtotal).then((result) => {
-      if (!cancelled) setTaxAmount(result.amount);
+      if (!cancelled) setTax({ amount: result.amount, applied: result.applied });
     });
     return () => {
       cancelled = true;
     };
   }, [client.id, taxableSubtotal]);
 
-  const finalTotal = taxableSubtotal + shipping.fee + taxAmount;
+  const finalTotal = taxableSubtotal + shipping.fee + tax.amount;
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -692,7 +700,7 @@ function EgyptCheckoutForm() {
         items: cart,
         subtotal: cartSubtotal,
         shippingFee: shipping.fee,
-        tax: taxAmount,
+        tax: tax.amount,
         discount: discountAmount,
         total: finalTotal,
         currency,
@@ -943,18 +951,24 @@ function EgyptCheckoutForm() {
                     <div className="mt-3 font-black text-xs text-slate-900">
                       {isSelected && shipping.loading
                         ? '…'
+                        : !isSelected
+                        ? ''
+                        : !shipping.feeQuoted
+                        ? '—'
                         : feeForOption === 0
                         ? t('freeShipping')
-                        : feeForOption !== undefined
-                        ? formatPrice(feeForOption)
-                        : ''}
+                        : formatPrice(feeForOption ?? 0)}
                     </div>
                   </label>
                 );
               })}
             </div>
             <p className="text-[11px] text-slate-500">
-              {governorateId ? (shipping.etaMessage ? shipping.etaMessage[language] : t('etaPendingAddress')) : t('etaPendingAddress')}
+              {!governorateId
+                ? t('etaPendingAddress')
+                : shipping.etaMessage
+                ? shipping.etaMessage[language]
+                : t('etaNotPublished')}
             </p>
           </fieldset>
 
@@ -977,8 +991,9 @@ function EgyptCheckoutForm() {
           appliedCoupon={appliedCoupon}
           deliveryFee={shipping.fee}
           shippingPending={!governorateId}
+          shippingFeeQuoted={shipping.feeQuoted}
           etaMessage={shipping.etaMessage ? shipping.etaMessage[language] : null}
-          tax={taxAmount}
+          tax={tax.applied ? tax.amount : null}
           taxLabel={client.tax.vatLabel[language]}
           finalTotal={finalTotal}
           submitState={submitState}
@@ -1143,6 +1158,7 @@ function OrderSummaryPanel({
   appliedCoupon,
   deliveryFee,
   shippingPending = false,
+  shippingFeeQuoted = true,
   etaMessage,
   tax,
   taxLabel,
@@ -1162,8 +1178,12 @@ function OrderSummaryPanel({
   // Egypt market: no shipping fee can be quoted before a governorate is
   // chosen, and "0" must not be shown as if delivery were free.
   shippingPending?: boolean;
+  // False when the store has no published courier rate at all.
+  shippingFeeQuoted?: boolean;
   etaMessage: string | null;
-  tax: number;
+  // null when this business is not charging tax — the row is then hidden
+  // rather than showing a 0 that implies a tax was calculated.
+  tax: number | null;
   taxLabel: string;
   finalTotal: number;
   submitState: 'idle' | 'submitting' | 'failed';
@@ -1228,15 +1248,25 @@ function OrderSummaryPanel({
           <div className="flex justify-between">
             <span>{t('shipping')}</span>
             <span className="font-bold text-slate-900">
-              {shippingPending ? '—' : deliveryFee === 0 ? t('freeShipping') : formatPrice(deliveryFee)}
+              {shippingPending || !shippingFeeQuoted
+                ? '—'
+                : deliveryFee === 0
+                ? t('freeShipping')
+                : formatPrice(deliveryFee)}
             </span>
           </div>
-          {shippingPending && <p className="text-[11px] text-slate-500">{t('shippingPendingAddress')}</p>}
+          {shippingPending ? (
+            <p className="text-[11px] text-slate-500">{t('shippingPendingAddress')}</p>
+          ) : !shippingFeeQuoted ? (
+            <p className="text-[11px] text-slate-500">{t('shippingNotPublished')}</p>
+          ) : null}
           {etaMessage && <p className="text-[11px] text-slate-500">{etaMessage}</p>}
-          <div className="flex justify-between">
-            <span>{taxLabel}</span>
-            <span className="font-bold text-slate-900">{formatPrice(tax)}</span>
-          </div>
+          {tax !== null && (
+            <div className="flex justify-between">
+              <span>{taxLabel}</span>
+              <span className="font-bold text-slate-900">{formatPrice(tax)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-base font-black text-slate-900 pt-3 border-t border-slate-200">
             <span>{t('orderTotal')}</span>
             <span className="text-xl text-primary">{formatPrice(finalTotal)}</span>
@@ -1264,7 +1294,9 @@ function OrderSummaryPanel({
           ) : (
             <>
               <Lock className="w-4 h-4" />
-              <span>{submitState === 'failed' ? t('tryAgain') : t('placeOrderBtn')} ({formatPrice(finalTotal)})</span>
+              <span>
+                {submitState === 'failed' ? t('tryAgain') : t('placeOrderBtn')} ({formatPrice(finalTotal)})
+              </span>
               <ArrowIcon className="w-4 h-4 transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
             </>
           )}

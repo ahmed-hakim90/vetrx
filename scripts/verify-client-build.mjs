@@ -16,10 +16,26 @@ import path from 'node:path';
 // client id; each entry lists other clients' brands plus the terminology of
 // markets that client does not serve.
 const FORBIDDEN_TERMS = {
-  shams: ['Voltix', 'Apex', 'Lumina', 'GCC', 'AED', 'SAR', 'Mada', 'Tabby', 'Tamara', 'Riyadh', 'Dubai'],
-  voltix: ['Shams', 'EGP'],
-  apex: ['Shams', 'EGP'],
-  lumina: ['Shams', 'EGP'],
+  shams: [
+    // other clients' brands
+    'Voltix',
+    'Apex',
+    'Lumina',
+    // markets Shams Stores does not serve
+    'GCC',
+    'AED',
+    'SAR',
+    'Mada',
+    'Tabby',
+    'Tamara',
+    'Riyadh',
+    'Dubai',
+    'Abu Dhabi',
+    'Jeddah',
+  ],
+  voltix: ['Shams', 'EGP', 'shams-stores'],
+  apex: ['Shams', 'EGP', 'shams-stores'],
+  lumina: ['Shams', 'EGP', 'shams-stores'],
 };
 
 const clientId = process.argv[2];

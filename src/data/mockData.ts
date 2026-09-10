@@ -7,6 +7,7 @@ import { Category, Product } from '../types/store';
 export const CATEGORIES: Category[] = [
   {
     id: 'smartphones',
+    slug: 'smartphones',
     name: { en: 'Smartphones & Tablets', ar: 'الهواتف الذكية والأجهزة اللوحية' },
     icon: 'Smartphone',
     count: 42,
@@ -15,6 +16,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: 'laptops',
+    slug: 'laptops',
     name: { en: 'Laptops & Computing', ar: 'أجهزة الكمبيوتر المحمولة والمكتبية' },
     icon: 'Laptop',
     count: 36,
@@ -23,6 +25,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: 'audio',
+    slug: 'audio',
     name: { en: 'Audio & Hi-Fi', ar: 'الصوتيات وسماعات الرأس' },
     icon: 'Headphones',
     count: 28,
@@ -31,6 +34,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: 'gaming',
+    slug: 'gaming',
     name: { en: 'Pro Gaming Gear', ar: 'معدات الألعاب الاحترافية' },
     icon: 'Gamepad2',
     count: 31,
@@ -39,6 +43,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: 'wearables',
+    slug: 'wearables',
     name: { en: 'Wearables & Smartwatches', ar: 'الساعات والأجهزة القابلة للارتداء' },
     icon: 'Watch',
     count: 19,
@@ -47,6 +52,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: 'smarthome',
+    slug: 'smarthome',
     name: { en: 'Smart Living & IoT', ar: 'المنزل الذكي وإنترنت الأشياء' },
     icon: 'Home',
     count: 24,

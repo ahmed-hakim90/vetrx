@@ -82,6 +82,17 @@ const ProductDetailContent: React.FC<{ product: Product }> = ({ product }) => {
     goToCheckout();
   };
 
+  // Delivery blurb: only claims a free-shipping threshold and served cities
+  // when this client has actually published both.
+  const servedCities = Array.from(new Set(client.shipping.zones.flatMap((z) => z.cities)));
+  const freeShippingThreshold = client.shipping.freeShippingThreshold;
+  const shippingBlurb =
+    client.shipping.etaConfirmed && freeShippingThreshold !== undefined && servedCities.length > 0
+      ? language === 'ar'
+        ? `الطلبات فوق ${formatPrice(freeShippingThreshold)} تحصل على شحن سريع مجاني إلى ${servedCities.join('، ')}.`
+        : `Orders over ${formatPrice(freeShippingThreshold)} qualify for free express delivery to ${servedCities.join(', ')}.`
+      : t('shippingNotPublished');
+
   // Related products: same store, same category, excluding this product —
   // never another client's catalog.
   const relatedProducts = products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 3);
@@ -458,13 +469,7 @@ const ProductDetailContent: React.FC<{ product: Product }> = ({ product }) => {
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <h5 className="font-bold text-slate-900 text-sm">{t('valueProp1Title')}</h5>
-                <p>
-                  {client.shipping.etaConfirmed
-                    ? language === 'ar'
-                      ? `الطلبات فوق ${formatPrice(client.shipping.freeShippingThreshold)} تحصل على شحن سريع مجاني إلى ${Array.from(new Set(client.shipping.zones.flatMap((z) => z.cities))).join('، ')}.`
-                      : `Orders over ${formatPrice(client.shipping.freeShippingThreshold)} qualify for free express delivery to ${Array.from(new Set(client.shipping.zones.flatMap((z) => z.cities))).join(', ')}.`
-                    : t('etaPendingAddress')}
-                </p>
+                <p>{shippingBlurb}</p>
               </div>
             </div>
           )}

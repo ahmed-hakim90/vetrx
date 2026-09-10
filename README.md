@@ -131,13 +131,12 @@ npm run dev -- --mode nova            # or add a "dev:nova" script
 `shams` (below) is this exact pattern already carried out for a real fourth
 client, not a hypothetical — read it for a concrete reference.
 
-## Shams Store — the Egypt-market reference client
+## Shams Stores — the Egypt-market reference client
 
 `shams` is the first client taken past "example config" into a full
-storefront: real routing, a full page set, an Egyptian checkout, and a
-provider-driven commerce layer. It is still in **Demo Mode** — see
-[docs/SHAMS-LAUNCH-CHECKLIST.md](docs/SHAMS-LAUNCH-CHECKLIST.md) for exactly
-what the business owner still has to supply.
+storefront for a **real business**: Shams Stores (شمس ستورز), professional
+photography, video and audio equipment, Egypt —
+[www.shams-stores.com](https://www.shams-stores.com).
 
 ```bash
 npm run dev:shams      # dev server (English/LTR by default)
@@ -153,10 +152,38 @@ npm run verify:shams   # build + assert no other client's/market's terms leaked 
 | `defaultLocale` / `supportedLocales` | `'en'` / `['en', 'ar']` — English + LTR on a first visit, Arabic + RTL fully supported |
 | `currencies` / `defaultCurrency` | a single `EGP` entry / `'EGP'` |
 | `timezone` | `'Africa/Cairo'` |
-| `tax` | 14% VAT, prices tax-exclusive |
-| `shipping` | 60 EGP standard, free over 1500 EGP, `etaConfirmed: false` |
-| `featureFlags` | wishlist + quick view on, coupons off, express delivery off |
-| `paymentMethods` | `card` and `cod` only |
+| `orderNumberPrefix` | `SHAMS` |
+
+**Confirmed and live**: trading name, tagline and hero copy, About text, two
+Cairo branches with their own phone numbers, three contact numbers, Facebook
+and Instagram, the production domain, and the 13-category tree (cameras,
+lenses, video production, lighting, professional audio, tripods &
+stabilizers, microphones, bags & cases, memory cards, accessories, darkroom,
+film, current offers).
+
+**Deliberately not asserted** — the business has not confirmed these, so the
+storefront says so instead of inventing them:
+
+| Unknown | What the storefront does |
+| --- | --- |
+| Shipping fees, served governorates, courier, delivery times | quotes no fee ("—" plus "delivery fees are not published for this store yet"), promises no date |
+| VAT registration (`tax.vatApplied: false`) | charges no VAT and **hides the tax row entirely** — the statutory 14% is recorded for reference only |
+| Whether Cash on Delivery is currently accepted | offered in Demo Mode with `confirmed: false`, which blocks production-readiness |
+| Card payment | `enabled: false` — not offered at all until a gateway is integrated |
+| In-store pickup | `shipping.pickupEnabled: false` — having branches on record does not by itself enable pickup |
+| Return / warranty policy, privacy policy, terms | render as clearly-labelled **drafts** with a visible notice |
+| Registered legal name, commercial register, tax number | absent; `legalName` holds the trading name and the checklist flags it |
+| Support email and both branch addresses | shown (they are the business's own records) but marked `needs-confirmation`, which the readiness check reports |
+
+Every one of those is an item in
+[docs/SHAMS-LAUNCH-CHECKLIST.md](docs/SHAMS-LAUNCH-CHECKLIST.md) and a
+blocker returned by `getProductionReadinessIssues()`.
+
+**The catalog is demo data.** `src/data/demo/shams/` holds 21 placeholder
+products across the real category tree: representative equipment names with
+**made-up prices and stock levels**, `isDemo: true`, no reviews, and Unsplash
+stock photography. While `commerce.provider` is `'mock'`, a dev-only banner
+says so at the top of every page (it never renders in a production build).
 
 **Language behaviour**: a first-time visitor always gets the client's
 `defaultLocale` (English for Shams) — the browser's language is deliberately
@@ -165,25 +192,13 @@ never used to pick it. The choice is then stored per client
 returns to English. Switching language changes nothing else (client, currency,
 route).
 
-**Nothing invented**: `contact`, `addresses`, `socialLinks` are empty and
-`policies.returnPolicy`/`warrantyPolicy` are unset, so the header contact row,
-footer policy block, PDP guarantee badges, `/contact` page and the SEO
-`contactPoint`/`sameAs` entries all hide themselves rather than display a made
--up phone number or warranty claim. The seven info pages render **clearly
-labelled drafts** (`status: 'draft'` + a visible notice) instead of pretending
-to be approved policy.
-
-**Its own data**: Shams's catalog lives in `src/data/demo/shams/` (12 products,
-5 categories) and is wired in by a build-time virtual module, so
-`src/data/mockData.ts` — the shared voltix/apex/lumina catalog, full of Gulf
--market copy — is never part of a Shams build at all. Every Shams product has
-`isDemo: true`, `rating: 0` and `reviews: []`.
-
-**Client isolation is verified, not assumed**: `npm run verify:shams` greps the
-built bundle for `Voltix, Apex, Lumina, GCC, AED, SAR, Mada, Tabby, Tamara,
-Riyadh, Dubai` and exits non-zero on a hit. Two build-time plugins make that
-possible (`vite-plugins/activeClientConfig.ts`): only the selected client's
-config file and only its own demo catalog ever enter the module graph.
+**Client isolation is verified, not assumed**: `npm run verify:shams` greps
+the built bundle for `Voltix, Apex, Lumina, GCC, AED, SAR, Mada, Tabby,
+Tamara, Riyadh, Dubai, Abu Dhabi, Jeddah` and exits non-zero on a hit (and
+the reverse check for the Gulf clients looks for `Shams`/`EGP`). Two
+build-time plugins make that possible
+(`vite-plugins/activeClientConfig.ts`): only the selected client's config
+file and only its own demo catalog ever enter the module graph.
 
 ## Routes
 
@@ -221,13 +236,24 @@ in the query string, so a filtered listing is shareable.
   commerce provider computes them from governorate + method + subtotal; the fee
   and any ETA come back from there. Change the rules in the provider (or the
   real backend), not in the UI.
-- **Tax**: `tax.vatPercent` / `tax.pricesIncludeTax`, applied by
-  `calculateTaxes`.
+  - Leave `shipping.standardFee` **unset** while no courier rate is agreed:
+    the provider then returns `feeQuoted: false` and the UI shows "—" plus
+    "delivery fees are not published", instead of a `0` that reads as free
+    delivery.
+  - `freeShippingThreshold` unset ⇒ no free-shipping progress bar is shown.
+- **Tax**: `tax.vatApplied` decides whether tax exists at all. While it is
+  `false` the provider returns `applied: false`, no tax is added, and the tax
+  row is **hidden** — a statutory rate (`vatPercent`) is not the same fact as
+  "this business collects it". Set `vatApplied: true` and
+  `pricesIncludeTax` correctly once the registration status is confirmed.
 - **Delivery methods**: standard is always offered; express appears only when
   `featureFlags.expressDeliveryEnabled` is true; pickup appears only when
-  `addresses[]` has a confirmed branch. With `etaConfirmed: false` the UI shows
-  "shipping is calculated once you choose your governorate" and never a
-  promised date.
+  `shipping.pickupEnabled` is true **and** at least one address is on record
+  (branches existing does not by itself mean pickup is offered). With
+  `etaConfirmed: false` the UI never shows a promised date.
+- **Payment methods**: `enabled` controls what the running storefront offers;
+  `confirmed` records whether the business has actually agreed to accept it.
+  An enabled-but-unconfirmed method (Shams' COD today) is a launch blocker.
 
 ## Editing content and policies
 

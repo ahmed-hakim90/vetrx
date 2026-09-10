@@ -104,6 +104,17 @@ export const HomeScreen: React.FC = () => {
     .filter((p) => p.enabled)
     .map((p) => paymentMethodLabel(p, language));
 
+  // The secondary hero CTA points at either one product or one category
+  // (the config schema enforces exactly one).
+  const goToHeroSecondaryTarget = () => {
+    const { heroSecondaryCtaProductSlug, heroSecondaryCtaCategorySlug } = client.home;
+    if (heroSecondaryCtaProductSlug) {
+      navigateToProduct(heroSecondaryCtaProductSlug);
+    } else if (heroSecondaryCtaCategorySlug) {
+      navigateToCategory(heroSecondaryCtaCategorySlug);
+    }
+  };
+
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(
@@ -166,7 +177,7 @@ export const HomeScreen: React.FC = () => {
 
                 <button
                   id="hero-cta-explore-specs"
-                  onClick={() => navigateToProduct(client.home.heroSecondaryCtaProductSlug)}
+                  onClick={goToHeroSecondaryTarget}
                   className="min-h-[44px] bg-slate-900/90 hover:bg-slate-800 active:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all cursor-pointer flex items-center touch-manipulation active:scale-95"
                 >
                   {client.home.heroSecondaryCtaLabel?.[language] ?? t('heroCtaSecondary')}
@@ -179,7 +190,7 @@ export const HomeScreen: React.FC = () => {
               <button
                 type="button"
                 className="relative group cursor-pointer text-start"
-                onClick={() => navigateToProduct(client.home.heroSecondaryCtaProductSlug)}
+                onClick={goToHeroSecondaryTarget}
               >
                 <img
                   src={client.home.heroImage}
