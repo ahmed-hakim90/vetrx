@@ -30,5 +30,5 @@ export interface PageSEO {
   keywords: string[];
   alternateLocales: AlternateLocale[];
   productMeta?: ProductSEOMeta;
-  structuredData: Record<string, any>;
+  structuredData: Record<string, unknown>;
 }

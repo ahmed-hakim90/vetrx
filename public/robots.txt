@@ -1,0 +1,19 @@
+# Shared by every client build. The paths below are also marked noindex in
+# the document head at runtime (see src/components/common/SEOManager.tsx) —
+# this file is the belt to that braces.
+User-agent: *
+Allow: /
+
+# Private / transactional pages: nothing here is useful in an index, and
+# order URLs must never be crawled.
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /checkout
+Disallow: /order/
+
+# Internal search result pages (thin, infinitely variable).
+Disallow: /search
+
+# No Sitemap: line yet — a sitemap should be generated from the real product
+# catalog at deploy time, per client domain (VITE_SITE_URL). Add it here as
+# `Sitemap: https://<your-domain>/sitemap.xml` once that exists.

@@ -14,18 +14,13 @@ import {
   Eye,
   Heart,
   ShoppingCart,
-  ChevronRight,
-  Smartphone,
-  Laptop,
-  Headphones,
-  Gamepad2,
-  Watch,
-  Home as HomeIcon,
   Check,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { PRODUCTS, CATEGORIES, BRAND_LOGOS } from '../../data/mockData';
 import { Product } from '../../types/store';
+import { getCategoryIcon } from '../../core/catalog/categoryIcons';
+import { activatableCardProps } from '../../core/a11y/activatableCard';
+import { paymentMethodLabel } from '../../core/payment/paymentLabels';
 import {
   HeroBannerSkeleton,
   CategoryGridSkeleton,
@@ -36,8 +31,9 @@ import {
 export const HomeScreen: React.FC = () => {
   const {
     language,
-    currentStoreConfig,
-    activeStore,
+    client,
+    products,
+    categories,
     t,
     formatPrice,
     addToCart,
@@ -46,7 +42,6 @@ export const HomeScreen: React.FC = () => {
     setQuickViewProductId,
     navigateToProduct,
     navigateToCategory,
-    setActiveScreen,
   } = useStore();
 
   const [isHydrating, setIsHydrating] = useState(true);
@@ -60,7 +55,7 @@ export const HomeScreen: React.FC = () => {
       setIsHydrating(false);
     }, 650);
     return () => clearTimeout(timer);
-  }, [activeStore]);
+  }, []);
 
   // Live countdown timer for Deal of the Day (hours, minutes, seconds)
   const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 18 });
@@ -83,19 +78,31 @@ export const HomeScreen: React.FC = () => {
 
   const ArrowIcon = language === 'ar' ? ArrowLeft : ArrowRight;
 
-  // Filter products for the current store and active tab
-  const storeProducts = PRODUCTS.filter(
-    (p) => activeStore === 'voltix' || p.storeId === activeStore
-  );
-
-  const displayedProducts = storeProducts.filter((p) => {
+  const displayedProducts = products.filter((p) => {
     if (activeTab === 'bestseller') return p.rating >= 4.8;
     if (activeTab === 'new') return p.badge?.type === 'new' || p.isFeatured;
     if (activeTab === 'sale') return Boolean(p.originalPrice && p.originalPrice > p.price);
     return true;
   });
 
-  const flashDealProduct = PRODUCTS.find((p) => p.isFlashDeal && (activeStore === 'voltix' || p.storeId === activeStore)) || PRODUCTS[3];
+  const flashDealProduct = products.find((p) => p.isFlashDeal);
+
+  // Category cards shown on the homepage are restricted to this client's own
+  // navigation categories; supplementary display data (image, count) comes
+  // from the shared demo catalog when available.
+  const homeCategories = client.navigationCategories.map((navCat) => ({
+    ...navCat,
+    image: categories.find((c) => c.id === navCat.id)?.image,
+    count: products.filter((p) => p.category === navCat.id).length,
+  }));
+
+  // Brand list is derived from this client's own catalog, never a shared list.
+  const clientBrands = Array.from(new Set(products.map((p) => p.brand)));
+
+  const citiesServed = Array.from(new Set(client.shipping.zones.flatMap((z) => z.cities)));
+  const enabledPaymentLabels = client.paymentMethods
+    .filter((p) => p.enabled)
+    .map((p) => paymentMethodLabel(p, language));
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,18 +116,6 @@ export const HomeScreen: React.FC = () => {
     setTimeout(() => setAddedProductId(null), 1600);
   };
 
-  const getCategoryIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Smartphone': return Smartphone;
-      case 'Laptop': return Laptop;
-      case 'Headphones': return Headphones;
-      case 'Gamepad2': return Gamepad2;
-      case 'Watch': return Watch;
-      case 'Home': return HomeIcon;
-      default: return Zap;
-    }
-  };
-
   return (
     <div className="space-y-12 pb-16">
       {/* 1. Hero Showcase Banner */}
@@ -129,133 +124,147 @@ export const HomeScreen: React.FC = () => {
       ) : (
         <section className="relative overflow-hidden bg-slate-950 text-white rounded-2xl mx-4 lg:mx-auto max-w-7xl mt-4 border border-slate-800 shadow-xl">
           {/* Glow background elements */}
-          <div
-            className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-30 pointer-events-none"
-            style={{ backgroundColor: currentStoreConfig.primaryColor }}
-          />
-          <div
-            className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl opacity-20 pointer-events-none"
-            style={{ backgroundColor: currentStoreConfig.accentColor }}
-          />
+          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-30 pointer-events-none bg-primary" />
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl opacity-20 pointer-events-none bg-accent" />
 
           <div className="relative max-w-7xl mx-auto px-6 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Text Content */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wide uppercase">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>{t('heroBadge')}</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wide uppercase">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{client.home.heroBadge[language]}</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
-                {t('heroTitle')}
+                {client.home.heroTitle[language]}
               </h1>
 
               <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed font-normal">
-                {t('heroSubtitle')}
+                {client.home.heroSubtitle[language]}
               </p>
 
-              {/* Quick Tech Specs Stats */}
+              {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-3 pt-2 max-w-md">
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                  <div className="text-base sm:text-lg font-black text-white">{t('heroStat1')}</div>
-                  <div className="text-[11px] text-slate-400">{t('heroStat1Label')}</div>
-                </div>
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                  <div className="text-base sm:text-lg font-black text-blue-400">{t('heroStat2')}</div>
-                  <div className="text-[11px] text-slate-400">{t('heroStat2Label')}</div>
-                </div>
-                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                  <div className="text-base sm:text-lg font-black text-amber-400">{t('heroStat3')}</div>
-                  <div className="text-[11px] text-slate-400">{t('heroStat3Label')}</div>
-                </div>
+                {client.home.heroStats.map((stat, i) => (
+                  <div key={i} className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
+                    <div className="text-base sm:text-lg font-black text-white">{stat.value[language]}</div>
+                    <div className="text-[11px] text-slate-400">{stat.label[language]}</div>
+                  </div>
+                ))}
               </div>
 
               {/* CTAs */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
                   id="hero-cta-shop-now"
-                  onClick={() => navigateToCategory('all')}
-                  className="min-h-[44px] bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer group touch-manipulation active:scale-95"
+                  onClick={() => navigateToCategory(client.home.heroPrimaryCtaCategorySlug)}
+                  className="min-h-[44px] bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer group touch-manipulation active:scale-95"
                 >
-                  <span>{t('heroCtaPrimary')}</span>
+                  <span>{client.home.heroPrimaryCtaLabel?.[language] ?? t('heroCtaPrimary')}</span>
                   <ArrowIcon className="w-4 h-4 transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
                 </button>
 
                 <button
                   id="hero-cta-explore-specs"
-                  onClick={() => navigateToProduct('prod-iphone-16-pro-max')}
+                  onClick={() => navigateToProduct(client.home.heroSecondaryCtaProductSlug)}
                   className="min-h-[44px] bg-slate-900/90 hover:bg-slate-800 active:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all cursor-pointer flex items-center touch-manipulation active:scale-95"
                 >
-                  {t('heroCtaSecondary')}
+                  {client.home.heroSecondaryCtaLabel?.[language] ?? t('heroCtaSecondary')}
                 </button>
               </div>
             </div>
 
             {/* Hero Image Showcase */}
             <div className="lg:col-span-5 flex justify-center relative">
-              <div className="relative group cursor-pointer" onClick={() => navigateToProduct('prod-iphone-16-pro-max')}>
+              <button
+                type="button"
+                className="relative group cursor-pointer text-start"
+                onClick={() => navigateToProduct(client.home.heroSecondaryCtaProductSlug)}
+              >
                 <img
-                  src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&q=85"
-                  alt="Voltix Flagship Phone"
+                  src={client.home.heroImage}
+                  alt={client.home.heroImageAlt[language]}
                   className="w-full max-w-sm rounded-2xl shadow-2xl object-cover border border-slate-700/60 transform transition-transform group-hover:scale-103 duration-300"
                 />
                 <div className="absolute -bottom-4 -left-4 rtl:-left-auto rtl:-right-4 bg-white/95 backdrop-blur-md text-slate-950 p-3 rounded-xl shadow-xl border border-slate-200 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black">
+                  <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black">
                     <Zap className="w-5 h-5 fill-white" />
                   </div>
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase">Official GCC Stock</div>
-                    <div className="text-xs font-black text-slate-900">Apple iPhone 16 Pro Max</div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">
+                      {client.displayName[language]}
+                    </div>
+                    <div className="text-xs font-black text-slate-900 truncate">
+                      {client.home.heroImageAlt[language]}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </section>
       )}
 
-      {/* 2. Value Proposition Strip */}
+      {/* 2. Value Proposition Strip — each card reflects this client's own
+          confirmed data; a card is hidden entirely rather than show a
+          generic claim (warranty/returns) this client hasn't confirmed. */}
       <section className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-blue-400 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-primary transition-colors">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Truck className="w-5 h-5" />
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900">{t('valueProp1Title')}</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">{t('valueProp1Desc')}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {citiesServed.length > 0
+                  ? (language === 'ar'
+                      ? `توصيل سريع إلى ${citiesServed.join('، ')}`
+                      : `Express delivery to ${citiesServed.join(', ')}`)
+                  : t('valueProp1Desc')}
+              </p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-blue-400 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+          {client.policies.warrantyPolicy && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-primary transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">{t('valueProp2Title')}</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {client.policies.warrantyPolicy[language]}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">{t('valueProp2Title')}</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">{t('valueProp2Desc')}</p>
-            </div>
-          </div>
+          )}
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-blue-400 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <RotateCcw className="w-5 h-5" />
+          {client.policies.returnPolicy && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-primary transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">{t('valueProp3Title')}</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {client.policies.returnPolicy[language]}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">{t('valueProp3Title')}</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">{t('valueProp3Desc')}</p>
-            </div>
-          </div>
+          )}
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-blue-400 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <CreditCard className="w-5 h-5" />
+          {enabledPaymentLabels.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3.5 shadow-2xs hover:border-primary transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">{t('valueProp4Title')}</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">{enabledPaymentLabels.join(', ')}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">{t('valueProp4Title')}</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">{t('valueProp4Desc')}</p>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -395,19 +404,19 @@ export const HomeScreen: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
-            {CATEGORIES.map((cat) => {
+            {homeCategories.map((cat) => {
               const IconComponent = getCategoryIcon(cat.icon);
               return (
                 <button
                   key={cat.id}
                   onClick={() => navigateToCategory(cat.id)}
-                  className="group min-h-[96px] p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md active:scale-95 transition-all text-center flex flex-col items-center justify-center cursor-pointer shadow-2xs touch-manipulation"
+                  className="group min-h-[96px] p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 hover:border-primary hover:shadow-md active:scale-95 transition-all text-center flex flex-col items-center justify-center cursor-pointer shadow-2xs touch-manipulation"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-600 flex items-center justify-center mb-2.5 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 group-hover:bg-primary/10 text-slate-700 group-hover:text-primary flex items-center justify-center mb-2.5 transition-colors">
                     <IconComponent className="w-6 h-6" />
                   </div>
-                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                    {cat.name[language]}
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-primary transition-colors line-clamp-1">
+                    {cat.label[language]}
                   </h4>
                   <span className="text-[10px] text-slate-500 mt-0.5">
                     {cat.count} {t('items')}
@@ -483,7 +492,7 @@ export const HomeScreen: React.FC = () => {
               return (
                 <div
                   key={product.id}
-                  onClick={() => navigateToProduct(product.id)}
+                  {...activatableCardProps(() => navigateToProduct(product.id))}
                   className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all flex flex-col justify-between overflow-hidden cursor-pointer shadow-2xs"
                 >
                   {/* Image Container with Badges & Wishlist */}
@@ -604,80 +613,61 @@ export const HomeScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 6. Dual Bento Feature Banners */}
-      <section className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Banner 1: Audio */}
-        <div className="relative rounded-2xl overflow-hidden bg-slate-950 text-white p-8 border border-slate-800 flex flex-col justify-between min-h-[260px] shadow-md group">
-          <div className="relative z-10 space-y-3 max-w-sm">
-            <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-              {t('bento1Badge')}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-              {t('bento1Title')}
-            </h3>
-            <p className="text-xs text-slate-300">{t('bento1Desc')}</p>
-            <button
-              onClick={() => navigateToCategory('audio')}
-              className="mt-2 text-xs font-bold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1.5 cursor-pointer"
+      {/* 6. Feature Banners (count and content come from the client config) */}
+      {client.home.bentoBanners.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {client.home.bentoBanners.map((banner, i) => (
+            <div
+              key={i}
+              className="relative rounded-2xl overflow-hidden bg-slate-950 text-white p-8 border border-slate-800 flex flex-col justify-between min-h-[260px] shadow-md group"
             >
-              <span>{t('bento1Cta')}</span>
-              <ArrowIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <img
-            src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"
-            alt="Audio"
-            className="absolute right-0 bottom-0 rtl:right-auto rtl:left-0 w-64 h-64 object-contain opacity-40 group-hover:scale-105 transition-transform duration-300 pointer-events-none"
-          />
-        </div>
+              <div className="relative z-10 space-y-3 max-w-sm">
+                <span className="px-2.5 py-1 rounded bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
+                  {banner.badge[language]}
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                  {banner.title[language]}
+                </h3>
+                <p className="text-xs text-slate-300">{banner.description[language]}</p>
+                <button
+                  onClick={() => navigateToCategory(banner.categorySlug)}
+                  className="mt-2 text-xs font-bold text-primary hover:opacity-80 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{banner.ctaLabel[language]}</span>
+                  <ArrowIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <img
+                src={banner.image}
+                alt={banner.title[language]}
+                className="absolute right-0 bottom-0 rtl:right-auto rtl:left-0 w-64 h-64 object-contain opacity-40 group-hover:scale-105 transition-transform duration-300 pointer-events-none"
+              />
+            </div>
+          ))}
+        </section>
+      )}
 
-        {/* Banner 2: Gaming */}
-        <div className="relative rounded-2xl overflow-hidden bg-zinc-950 text-white p-8 border border-zinc-800 flex flex-col justify-between min-h-[260px] shadow-md group">
-          <div className="relative z-10 space-y-3 max-w-sm">
-            <span className="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-wider">
-              {t('bento2Badge')}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-              {t('bento2Title')}
-            </h3>
-            <p className="text-xs text-slate-300">{t('bento2Desc')}</p>
-            <button
-              onClick={() => navigateToCategory('gaming')}
-              className="mt-2 text-xs font-bold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>{t('bento2Cta')}</span>
-              <ArrowIcon className="w-3.5 h-3.5" />
-            </button>
+      {/* 7. Brands carried by this store (derived from its own catalog) */}
+      {clientBrands.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-8 text-center">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">
+              {t('authorizedBrands')}
+            </h4>
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+              {clientBrands.map((brand) => (
+                <button
+                  key={brand}
+                  onClick={() => navigateToCategory('all')}
+                  className="text-sm sm:text-base font-black text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
           </div>
-          <img
-            src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&q=80"
-            alt="Gaming"
-            className="absolute right-0 bottom-0 rtl:right-auto rtl:left-0 w-64 h-64 object-contain opacity-40 group-hover:scale-105 transition-transform duration-300 pointer-events-none"
-          />
-        </div>
-      </section>
-
-      {/* 7. Official Authorized Brand Logos */}
-      <section className="max-w-7xl mx-auto px-4">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-8 text-center">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-6">
-            {t('authorizedBrands')}
-          </h4>
-          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-            {BRAND_LOGOS.map((b) => (
-              <button
-                key={b.name}
-                onClick={() => {
-                  navigateToCategory('all');
-                }}
-                className="text-sm sm:text-base font-black text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
-              >
-                {b.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 };

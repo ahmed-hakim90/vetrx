@@ -1,41 +1,62 @@
-import { Product, Category, StoreConfig, Language, Currency } from '../types/store';
-import { PageSEO } from '../types/seo';
+import { Product, Category, Language, Currency } from '../types/store';
+import { ClientConfig } from '../config/clients/schema';
+import { PageSEO, AlternateLocale } from '../types/seo';
 
-const DEFAULT_ORIGIN = 'https://voltix-electronics.store';
-
-function getBaseUrl(): string {
+function getBaseUrl(client: ClientConfig): string {
   if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin;
   }
-  return DEFAULT_ORIGIN;
+  return client.seo.siteUrl;
 }
 
-export function buildHomeSEO(
-  store: StoreConfig,
-  language: Language
-): PageSEO {
-  const baseUrl = getBaseUrl();
+export function buildHomeSEO(client: ClientConfig, language: Language): PageSEO {
+  const baseUrl = getBaseUrl(client);
   const isArabic = language === 'ar';
-  const storeName = store.name[language];
+  const storeName = client.displayName[language];
 
-  const title = isArabic
-    ? `${storeName} | المتجر الرسمي المعتمد للإلكترونيات والأجهزة الذكية في الشرق الأوسط`
-    : `${storeName} | Official Authorized Consumer Electronics & Smart Devices Store`;
+  const title = `${storeName} | ${client.tagline[language]}`;
+  const description = client.seo.defaultDescription[language];
 
-  const description = isArabic
-    ? `تسوق أحدث الهواتف الذكية، أجهزة الكمبيوتر المحمولة، السماعات، منصات الألعاب والأجهزة المنزلية الذكية من ${storeName}. ضمان إقليمي معتمد، شحن سريع لجميع دول الخليج والدفع عند الاستلام وتقسيط تابي وتمارا.`
-    : `Shop the latest flagship smartphones, laptops, audio gear, gaming rigs, and smart home gadgets at ${storeName}. 100% genuine GCC official distributor warranty, express next-day GCC shipping, Tabby & Tamara installments.`;
+  const canonicalUrl = `${baseUrl}/`;
+  // The UI language is a client-side, persisted preference rather than a
+  // separate URL per locale, so every hreflang alternate points back at the
+  // same canonical page — accurate for this architecture, not a guess at a
+  // routing scheme the app doesn't have.
+  const alternateLocales: AlternateLocale[] = client.supportedLocales.map((lang) => ({
+    lang,
+    href: canonicalUrl,
+  }));
+  alternateLocales.push({ lang: 'x-default', href: canonicalUrl });
 
-  const canonicalUrl = `${baseUrl}/?lang=${language}`;
-  const alternateLocales = [
-    { lang: 'en', href: `${baseUrl}/?lang=en` },
-    { lang: 'ar', href: `${baseUrl}/?lang=ar` },
-    { lang: 'x-default', href: `${baseUrl}/` },
-  ];
+  const keywords = [storeName, ...(isArabic ? ['إلكترونيات', 'تسوق أونلاين'] : ['electronics', 'online shopping'])];
 
-  const keywords = isArabic
-    ? [storeName, 'إلكترونيات', 'هواتف ذكية', 'لابتوبات', 'سماعات', 'ألعاب', 'متجر إلكترونيات الخليج', 'عروض تقنية', 'تابي', 'تمارا']
-    : [storeName, 'electronics', 'smartphones', 'laptops', 'gaming', 'headphones', 'GCC electronics store', 'tech deals', 'Tabby', 'Tamara'];
+  // Never publish a contactPoint or sameAs entry that wasn't actually
+  // confirmed for this client — an absent phone number or social link is
+  // omitted from structured data rather than left empty/fabricated.
+  const sameAs = Object.values(client.socialLinks).filter((v): v is string => Boolean(v));
+
+  const organization: Record<string, unknown> = {
+    '@type': 'Organization',
+    '@id': `${baseUrl}/#organization`,
+    name: client.legalName,
+    url: baseUrl,
+    logo: {
+      '@type': 'ImageObject',
+      url: client.seo.organizationLogo,
+    },
+  };
+  if (sameAs.length > 0) organization.sameAs = sameAs;
+  if (client.contact.supportPhone) {
+    organization.contactPoint = [
+      {
+        '@type': 'ContactPoint',
+        telephone: client.contact.supportPhone,
+        contactType: 'customer support',
+        areaServed: client.countriesServed,
+        availableLanguage: client.supportedLocales,
+      },
+    ];
+  }
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -46,42 +67,15 @@ export function buildHomeSEO(
         url: baseUrl,
         name: storeName,
         description,
-        publisher: {
-          '@id': `${baseUrl}/#organization`,
-        },
-        inLanguage: ['en-AE', 'ar-AE', 'en-SA', 'ar-SA'],
+        publisher: { '@id': `${baseUrl}/#organization` },
+        inLanguage: client.supportedLocales,
         potentialAction: {
           '@type': 'SearchAction',
-          target: `${baseUrl}/?screen=plp&search={search_term_string}`,
+          target: `${baseUrl}/search?q={search_term_string}`,
           'query-input': 'required name=search_term_string',
         },
       },
-      {
-        '@type': 'Organization',
-        '@id': `${baseUrl}/#organization`,
-        name: storeName,
-        url: baseUrl,
-        logo: {
-          '@type': 'ImageObject',
-          url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80',
-          width: '600',
-          height: '600',
-        },
-        sameAs: [
-          'https://twitter.com/VoltixStore',
-          'https://instagram.com/VoltixStore',
-          'https://facebook.com/VoltixStore',
-        ],
-        contactPoint: [
-          {
-            '@type': 'ContactPoint',
-            telephone: '+971-4-800-8658',
-            contactType: 'customer support',
-            areaServed: ['AE', 'SA', 'KW', 'QA', 'BH', 'OM'],
-            availableLanguage: ['Arabic', 'English'],
-          },
-        ],
-      },
+      organization,
     ],
   };
 
@@ -93,12 +87,12 @@ export function buildHomeSEO(
     ogType: 'website',
     ogTitle: title,
     ogDescription: description,
-    ogImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80',
+    ogImage: client.seo.ogImage,
     ogImageAlt: storeName,
     twitterCard: 'summary_large_image',
     twitterTitle: title,
     twitterDescription: description,
-    twitterImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80',
+    twitterImage: client.seo.ogImage,
     keywords,
     alternateLocales,
     structuredData,
@@ -107,16 +101,16 @@ export function buildHomeSEO(
 
 export function buildCategorySEO(
   category: Category | undefined,
-  store: StoreConfig,
+  client: ClientConfig,
   language: Language,
   productCount: number,
-  searchQuery?: string
+  searchQuery: string | undefined,
+  path: string
 ): PageSEO {
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(client);
   const isArabic = language === 'ar';
-  const storeName = store.name[language];
+  const storeName = client.displayName[language];
   const catName = category ? category.name[language] : (isArabic ? 'جميع المنتجات' : 'All Products');
-  const catId = category ? category.id : 'all';
 
   let title = '';
   let description = '';
@@ -126,42 +120,37 @@ export function buildCategorySEO(
       ? `نتائج البحث عن "${searchQuery}" | ${storeName}`
       : `Search results for "${searchQuery}" | ${storeName}`;
     description = isArabic
-      ? `تصفح نتائج البحث عن "${searchQuery}" في ${storeName}. عروض حصرية، أفضل الأسعار وشحن سريع.`
-      : `Browse search results for "${searchQuery}" at ${storeName}. Exclusive prices, verified stock, and fast express delivery.`;
+      ? `تصفح نتائج البحث عن "${searchQuery}" في ${storeName}.`
+      : `Browse search results for "${searchQuery}" at ${storeName}.`;
   } else if (category) {
     title = isArabic
-      ? `${catName} - تسوق أفضل العروض والأسعار (${productCount} جهاز) | ${storeName}`
-      : `${catName} - Shop Top Deals & Latest Models (${productCount} items) | ${storeName}`;
+      ? `${catName} - تسوق أفضل العروض (${productCount} منتج) | ${storeName}`
+      : `${catName} - Shop Top Deals (${productCount} items) | ${storeName}`;
     description = isArabic
-      ? `اكتشف تشكيلة واسعة من ${catName} لدى ${storeName}. متوفر مع أحدث المواصفات، ضمان الوكيل المعتمد، وإمكانية الدفع بالتقسيط بدون فوائد.`
-      : `Explore our premium collection of ${catName} at ${storeName}. Featuring top international brands, genuine manufacturer warranty, and interest-free installment plans.`;
+      ? `اكتشف تشكيلة واسعة من ${catName} لدى ${storeName}.`
+      : `Explore our collection of ${catName} at ${storeName}.`;
   } else {
     title = isArabic
-      ? `كتالوج الإلكترونيات الشامل (${productCount} منتج) | ${storeName}`
-      : `Complete Electronics Catalog (${productCount} Products) | ${storeName}`;
+      ? `الكتالوج الكامل (${productCount} منتج) | ${storeName}`
+      : `Complete Catalog (${productCount} Products) | ${storeName}`;
     description = isArabic
-      ? `تصفح كامل منتجات ${storeName} من هواتف، لابتوبات، شاشات، وملحقات تقنية معتمدة بأسعار منافسة في دول الخليج.`
-      : `Browse all high-performance electronics at ${storeName}. Genuine distributor-backed laptops, smartphones, consoles and gadgets.`;
+      ? `تصفح كامل منتجات ${storeName}.`
+      : `Browse all products at ${storeName}.`;
   }
 
-  const queryParams = new URLSearchParams();
-  queryParams.set('screen', 'plp');
-  if (catId !== 'all') queryParams.set('category', catId);
-  if (searchQuery) queryParams.set('search', searchQuery);
+  const canonicalUrl = `${baseUrl}${path}`;
+  const alternateLocales: AlternateLocale[] = client.supportedLocales.map((lang) => ({
+    lang,
+    href: canonicalUrl,
+  }));
+  alternateLocales.push({ lang: 'x-default', href: canonicalUrl });
+  // Search results reflect a transient query, not stable indexable content.
+  const robotsDirective = searchQuery && searchQuery.trim()
+    ? 'noindex, follow'
+    : 'index, follow, max-image-preview:large, max-snippet:-1';
 
-  const canonicalUrl = `${baseUrl}/?${queryParams.toString()}&lang=${language}`;
-
-  const alternateLocales = [
-    { lang: 'en', href: `${baseUrl}/?${queryParams.toString()}&lang=en` },
-    { lang: 'ar', href: `${baseUrl}/?${queryParams.toString()}&lang=ar` },
-    { lang: 'x-default', href: `${baseUrl}/?${queryParams.toString()}` },
-  ];
-
-  const ogImage = category?.image || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80';
-
-  const keywords = isArabic
-    ? [catName, storeName, 'شراء ' + catName, 'أسعار ' + catName, 'عروض ' + catName, 'إلكترونيات دبي', 'إلكترونيات الرياض']
-    : [catName, storeName, 'buy ' + catName, 'best ' + catName, catName + ' price GCC', 'electronics sale'];
+  const ogImage = category?.image || client.seo.ogImage;
+  const keywords = [catName, storeName];
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -169,27 +158,13 @@ export function buildCategorySEO(
     name: title,
     description,
     url: canonicalUrl,
-    inLanguage: language === 'ar' ? 'ar' : 'en',
-    isPartOf: {
-      '@type': 'WebSite',
-      name: storeName,
-      url: baseUrl,
-    },
+    inLanguage: language,
+    isPartOf: { '@type': 'WebSite', name: storeName, url: baseUrl },
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        {
-          '@type': 'ListItem',
-          position: 1,
-          name: isArabic ? 'الرئيسية' : 'Home',
-          item: `${baseUrl}/?lang=${language}`,
-        },
-        {
-          '@type': 'ListItem',
-          position: 2,
-          name: catName,
-          item: canonicalUrl,
-        },
+        { '@type': 'ListItem', position: 1, name: isArabic ? 'الرئيسية' : 'Home', item: `${baseUrl}/` },
+        { '@type': 'ListItem', position: 2, name: catName, item: canonicalUrl },
       ],
     },
   };
@@ -198,7 +173,7 @@ export function buildCategorySEO(
     title,
     description,
     canonicalUrl,
-    robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+    robots: robotsDirective,
     ogType: 'website',
     ogTitle: title,
     ogDescription: description,
@@ -216,53 +191,33 @@ export function buildCategorySEO(
 
 export function buildProductSEO(
   product: Product,
-  store: StoreConfig,
+  client: ClientConfig,
   language: Language,
   currency: Currency
 ): PageSEO {
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(client);
   const isArabic = language === 'ar';
-  const storeName = store.name[language];
+  const storeName = client.displayName[language];
   const prodTitle = product.title[language];
   const prodDesc = product.description[language];
 
   const title = isArabic
-    ? `${prodTitle} | ${product.brand} - متوفر الآن لدى ${storeName}`
-    : `${prodTitle} | ${product.brand} - Available Now at ${storeName}`;
+    ? `${prodTitle} | ${product.brand} - متوفر لدى ${storeName}`
+    : `${prodTitle} | ${product.brand} - Available at ${storeName}`;
 
   const description = isArabic
-    ? `اشتري ${prodTitle} من ${product.brand} بسعر ${product.price} ${currency}. ${prodDesc.slice(0, 140)}... شحن سريع، ضمان معتمد، والدفع بالتقسيط.`
-    : `Buy ${prodTitle} by ${product.brand} for ${product.price} ${currency}. ${prodDesc.slice(0, 140)}... Express GCC shipping, official brand warranty & easy installments.`;
+    ? `اشتري ${prodTitle} من ${product.brand} بسعر ${product.price} ${currency}. ${prodDesc.slice(0, 140)}...`
+    : `Buy ${prodTitle} by ${product.brand} for ${product.price} ${currency}. ${prodDesc.slice(0, 140)}...`;
 
-  const canonicalUrl = `${baseUrl}/?screen=pdp&product=${product.id}&lang=${language}`;
+  const canonicalUrl = `${baseUrl}/product/${product.id}`;
+  const alternateLocales: AlternateLocale[] = client.supportedLocales.map((lang) => ({
+    lang,
+    href: canonicalUrl,
+  }));
+  alternateLocales.push({ lang: 'x-default', href: canonicalUrl });
 
-  const alternateLocales = [
-    { lang: 'en', href: `${baseUrl}/?screen=pdp&product=${product.id}&lang=en` },
-    { lang: 'ar', href: `${baseUrl}/?screen=pdp&product=${product.id}&lang=ar` },
-    { lang: 'x-default', href: `${baseUrl}/?screen=pdp&product=${product.id}` },
-  ];
-
-  const primaryImage = product.images[0] || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80';
-
-  const keywords = isArabic
-    ? [
-        product.brand,
-        prodTitle,
-        `سعر ${prodTitle}`,
-        `مواصفات ${prodTitle}`,
-        storeName,
-        'إلكترونيات أصلية',
-        'ضمان وكيل',
-      ]
-    : [
-        product.brand,
-        prodTitle,
-        `${prodTitle} price`,
-        `${prodTitle} specs`,
-        `${prodTitle} review`,
-        storeName,
-        'buy tech online GCC',
-      ];
+  const primaryImage = product.images[0] || client.seo.ogImage;
+  const keywords = [product.brand, prodTitle, storeName];
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -271,48 +226,38 @@ export function buildProductSEO(
     image: product.images,
     description: prodDesc,
     sku: product.id,
-    mpn: `VTX-${product.id.toUpperCase()}`,
-    brand: {
-      '@type': 'Brand',
-      name: product.brand,
-    },
+    brand: { '@type': 'Brand', name: product.brand },
     offers: {
       '@type': 'Offer',
       url: canonicalUrl,
       priceCurrency: currency,
       price: product.price,
-      priceValidUntil: '2026-12-31',
       itemCondition: 'https://schema.org/NewCondition',
-      availability: product.inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      seller: {
-        '@type': 'Organization',
-        name: storeName,
-      },
+      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: { '@type': 'Organization', name: client.legalName },
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.rating,
-      reviewCount: product.reviewCount,
-      bestRating: '5',
-      worstRating: '1',
-    },
-    review: product.reviews.slice(0, 5).map((r) => ({
-      '@type': 'Review',
-      author: {
-        '@type': 'Person',
-        name: r.author,
-      },
-      datePublished: r.date,
-      reviewRating: {
-        '@type': 'Rating',
-        ratingValue: r.rating,
-        bestRating: '5',
-      },
-      headline: r.title[language],
-      reviewBody: r.comment[language],
-    })),
+    aggregateRating:
+      product.reviewCount > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: product.rating,
+            reviewCount: product.reviewCount,
+            bestRating: '5',
+            worstRating: '1',
+          }
+        : undefined,
+    // Never publish demo/placeholder reviews as if they were real.
+    review:
+      product.reviews.length > 0
+        ? product.reviews.slice(0, 5).map((r) => ({
+            '@type': 'Review',
+            author: { '@type': 'Person', name: r.author },
+            datePublished: r.date,
+            reviewRating: { '@type': 'Rating', ratingValue: r.rating, bestRating: '5' },
+            headline: r.title[language],
+            reviewBody: r.comment[language],
+          }))
+        : undefined,
   };
 
   return {
@@ -344,44 +289,104 @@ export function buildProductSEO(
   };
 }
 
-export function buildCheckoutSEO(
-  store: StoreConfig,
-  language: Language
+// Shared builder for every page that must never be indexed: checkout,
+// cart, wishlist, and order confirmation. Each just supplies its own
+// title/description/path.
+export function buildNoIndexSEO(
+  client: ClientConfig,
+  language: Language,
+  title: string,
+  description: string,
+  path: string
 ): PageSEO {
-  const baseUrl = getBaseUrl();
-  const isArabic = language === 'ar';
-  const storeName = store.name[language];
-
-  const title = isArabic
-    ? `إتمام الطلب وسلة التسوق الآمنة | ${storeName}`
-    : `Secure Checkout & Order Review | ${storeName}`;
-
-  const description = isArabic
-    ? `صفحة إتمام الطلب الآمنة والدفع المشفر عبر ${storeName}.`
-    : `Secure 256-bit encrypted checkout and order confirmation on ${storeName}.`;
-
-  const canonicalUrl = `${baseUrl}/?screen=checkout&lang=${language}`;
+  const baseUrl = getBaseUrl(client);
+  const canonicalUrl = `${baseUrl}${path}`;
 
   return {
     title,
     description,
     canonicalUrl,
-    robots: 'noindex, nofollow, noarchive', // Standard checkout protection
+    robots: 'noindex, nofollow, noarchive',
     ogType: 'website',
     ogTitle: title,
     ogDescription: description,
-    ogImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80',
+    ogImage: client.seo.ogImage,
     twitterCard: 'summary',
     twitterTitle: title,
     twitterDescription: description,
-    twitterImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&h=630&fit=crop&q=80',
-    keywords: ['checkout', 'secure payment'],
+    twitterImage: client.seo.ogImage,
+    keywords: [],
     alternateLocales: [],
+    structuredData: {},
+  };
+}
+
+// Indexable informational pages (About, FAQ, Shipping, Returns, Warranty,
+// Privacy, Terms, Contact) — real content, so unlike checkout/cart/order
+// these are meant to be crawled.
+export function buildInfoPageSEO(client: ClientConfig, language: Language, title: string, path: string): PageSEO {
+  const baseUrl = getBaseUrl(client);
+  const canonicalUrl = `${baseUrl}${path}`;
+  const description = client.seo.defaultDescription[language];
+  const alternateLocales: AlternateLocale[] = client.supportedLocales.map((lang) => ({ lang, href: canonicalUrl }));
+  alternateLocales.push({ lang: 'x-default', href: canonicalUrl });
+
+  return {
+    title,
+    description,
+    canonicalUrl,
+    robots: 'index, follow',
+    ogType: 'website',
+    ogTitle: title,
+    ogDescription: description,
+    ogImage: client.seo.ogImage,
+    twitterCard: 'summary',
+    twitterTitle: title,
+    twitterDescription: description,
+    twitterImage: client.seo.ogImage,
+    keywords: [client.displayName[language]],
+    alternateLocales,
     structuredData: {
       '@context': 'https://schema.org',
-      '@type': 'CheckoutPage',
+      '@type': 'WebPage',
       name: title,
       url: canonicalUrl,
     },
+  };
+}
+
+export function buildCheckoutSEO(client: ClientConfig, language: Language): PageSEO {
+  const isArabic = language === 'ar';
+  const storeName = client.displayName[language];
+  const title = isArabic ? `إتمام الطلب | ${storeName}` : `Checkout | ${storeName}`;
+  const description = isArabic ? `صفحة إتمام الطلب لدى ${storeName}.` : `Checkout and order review at ${storeName}.`;
+  return buildNoIndexSEO(client, language, title, description, '/checkout');
+}
+
+export function buildNotFoundSEO(client: ClientConfig, language: Language): PageSEO {
+  const baseUrl = getBaseUrl(client);
+  const isArabic = language === 'ar';
+  const storeName = client.displayName[language];
+  const title = isArabic ? `الصفحة غير موجودة | ${storeName}` : `Page Not Found | ${storeName}`;
+  const description = isArabic
+    ? 'الصفحة أو المنتج الذي تبحث عنه غير موجود.'
+    : 'The page or product you are looking for could not be found.';
+
+  return {
+    title,
+    description,
+    canonicalUrl: `${baseUrl}/`,
+    robots: 'noindex, nofollow',
+    ogType: 'website',
+    ogTitle: title,
+    ogDescription: description,
+    ogImage: client.seo.ogImage,
+    twitterCard: 'summary',
+    twitterTitle: title,
+    twitterDescription: description,
+    twitterImage: client.seo.ogImage,
+    keywords: [],
+    alternateLocales: [],
+    structuredData: {},
   };
 }

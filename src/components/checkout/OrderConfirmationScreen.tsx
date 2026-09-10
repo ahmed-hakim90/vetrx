@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   CheckCircle2,
   Package,
@@ -11,10 +12,8 @@ import {
   ArrowLeft,
   Copy,
   Check,
-  RefreshCw,
   ShoppingBag,
   ShieldCheck,
-  Calendar,
   Sparkles,
   Phone,
   Mail,
@@ -22,147 +21,82 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Breadcrumb } from '../common/Breadcrumb';
-import { PRODUCTS } from '../../data/mockData';
 import { OrderDetails } from '../../types/store';
+import { mockCommerceProvider } from '../../core/commerce/MockCommerceProvider';
+import { paymentMethodLabelById } from '../../core/payment/paymentLabels';
 
+// Reached only after a real checkout (via /order/:orderId); the order id
+// always comes from the CommerceProvider (see CheckoutScreen), never
+// regenerated or guessed here. An unknown/expired order id renders a real
+// "not found" state instead of fabricating order data.
 export const OrderConfirmationScreen: React.FC = () => {
-  const {
-    confirmedOrder,
-    setConfirmedOrder,
-    setActiveScreen,
-    language,
-    formatPrice,
-    currency,
-    t,
-  } = useStore();
+  const { orderId } = useParams<{ orderId: string }>();
+  const { client, t } = useStore();
+  const [order, setOrder] = useState<OrderDetails | undefined | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!orderId) {
+      setOrder(undefined);
+      return;
+    }
+    mockCommerceProvider.getOrder(client.id, orderId).then((result) => {
+      if (!cancelled) setOrder(result ?? undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [client.id, orderId]);
+
+  if (order === null) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <p className="text-sm text-slate-400">{t('validatingCart')}</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return <OrderNotFound />;
+  }
+
+  return <OrderConfirmationContent order={order} />;
+};
+
+const OrderNotFound: React.FC = () => {
+  const { t, goHome, goToProducts } = useStore();
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-4">
+      <h1 className="text-2xl font-black text-slate-900 tracking-tight">{t('orderNotFoundTitle')}</h1>
+      <p className="text-sm text-slate-500 max-w-md mx-auto">{t('orderNotFoundDesc')}</p>
+      <div className="flex items-center justify-center gap-2">
+        <button
+          onClick={goHome}
+          className="min-h-11 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer touch-manipulation"
+        >
+          {t('backToHome')}
+        </button>
+        <button
+          onClick={goToProducts}
+          className="min-h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer touch-manipulation"
+        >
+          {t('startShopping')}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const OrderConfirmationContent: React.FC<{ order: OrderDetails }> = ({ order }) => {
+  const { setConfirmedOrder, goHome, goToProducts, language, formatPrice, client, t } = useStore();
 
   const ArrowIcon = language === 'ar' ? ArrowLeft : ArrowRight;
   const [copiedOrderId, setCopiedOrderId] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-
-  // Dynamic ETA calculation helpers
-  const calculateDynamicEta = (deliveryType: 'standard' | 'express' | 'same-day' = 'express') => {
-    const now = new Date();
-    if (deliveryType === 'same-day') {
-      const todayHour = 20; // 8:00 PM
-      return language === 'ar'
-        ? `اليوم، بحلول الساعة ${todayHour % 12}:00 مساءً`
-        : `Today, by 8:00 PM`;
-    } else if (deliveryType === 'express') {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const dateStr = tomorrow.toLocaleDateString(language === 'ar' ? 'ar-AE' : 'en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-      return language === 'ar'
-        ? `غداً (${dateStr}) بحلول الساعة 2:00 ظهراً`
-        : `Tomorrow (${dateStr}) by 2:00 PM`;
-    } else {
-      const standardDate = new Date(now);
-      standardDate.setDate(standardDate.getDate() + 3);
-      const dateStr = standardDate.toLocaleDateString(language === 'ar' ? 'ar-AE' : 'en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-      return language === 'ar'
-        ? `في غضون 2-3 أيام عمل (${dateStr})`
-        : `Within 2-3 Business Days (${dateStr})`;
-    }
-  };
-
-  // Build fallback order with dynamic content placeholders if user navigates directly to this route
-  const activeOrder: OrderDetails = React.useMemo(() => {
-    if (confirmedOrder) {
-      return confirmedOrder;
-    }
-
-    const defaultItems = [
-      {
-        id: 'sample-p1',
-        product: PRODUCTS[0],
-        quantity: 1,
-        selectedColor: PRODUCTS[0].variants?.colors?.[0],
-        selectedStorage: PRODUCTS[0].variants?.storage?.[1],
-        unitPrice: PRODUCTS[0].price,
-        totalPrice: PRODUCTS[0].price,
-      },
-      {
-        id: 'sample-p2',
-        product: PRODUCTS[1],
-        quantity: 1,
-        selectedColor: PRODUCTS[1].variants?.colors?.[0],
-        unitPrice: PRODUCTS[1].price,
-        totalPrice: PRODUCTS[1].price,
-      },
-    ];
-
-    const sub = PRODUCTS[0].price + PRODUCTS[1].price;
-    const tax = Math.round(sub * 0.05);
-    const ship = 15;
-
-    return {
-      orderId: `VTX-${Math.floor(100000 + Math.random() * 900000)}`,
-      date: new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      items: defaultItems,
-      subtotal: sub,
-      shippingFee: ship,
-      tax: tax,
-      discount: 0,
-      total: sub + tax + ship,
-      currency: currency,
-      shippingAddress: {
-        fullName: 'Tariq Al-Mansoor',
-        email: 'tariq.mansoor@example.ae',
-        phone: '+971 50 849 2031',
-        country: 'United Arab Emirates',
-        city: 'Dubai',
-        addressLine: 'Downtown Boulevard, Sky Tower, Apt 1402',
-        deliveryNotes: 'Leave with front desk concierge if not answered',
-      },
-      deliveryMethod: 'express',
-      paymentMethod: 'card',
-      status: 'confirmed',
-      estimatedDelivery: calculateDynamicEta('express'),
-    };
-  }, [confirmedOrder, currency, language]);
-
-  // Dynamic placeholders state for testing & demonstration
-  const [currentOrderId, setCurrentOrderId] = useState(activeOrder.orderId);
-  const [selectedDeliverySpeed, setSelectedDeliverySpeed] = useState<'standard' | 'express' | 'same-day'>(
-    activeOrder.deliveryMethod || 'express'
-  );
-  const [dynamicEta, setDynamicEta] = useState(
-    activeOrder.estimatedDelivery || calculateDynamicEta('express')
-  );
 
   const handleCopyOrderId = () => {
-    navigator.clipboard?.writeText(currentOrderId);
+    navigator.clipboard?.writeText(order.orderId);
     setCopiedOrderId(true);
     setTimeout(() => setCopiedOrderId(false), 2000);
-  };
-
-  const handleRegenerateDynamicPlaceholders = () => {
-    setIsRegenerating(true);
-    setTimeout(() => {
-      const newId = `VTX-${Math.floor(100000 + Math.random() * 900000)}`;
-      setCurrentOrderId(newId);
-      setDynamicEta(calculateDynamicEta(selectedDeliverySpeed));
-      setIsRegenerating(false);
-    }, 400);
-  };
-
-  const handleDeliverySpeedChange = (speed: 'standard' | 'express' | 'same-day') => {
-    setSelectedDeliverySpeed(speed);
-    setDynamicEta(calculateDynamicEta(speed));
   };
 
   const handlePrint = () => {
@@ -173,14 +107,7 @@ export const OrderConfirmationScreen: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-8 pb-24">
-      {/* 1. Breadcrumb navigation */}
-      <Breadcrumb
-        items={[
-          { label: t('navHome'), screen: 'home', onClick: () => setActiveScreen('home') },
-          { label: t('cart'), screen: 'checkout', onClick: () => setActiveScreen('checkout') },
-          { label: t('orderSuccessTitle').split('!')[0], active: true },
-        ]}
-      />
+      <Breadcrumb />
 
       {/* 2. Order Confirmation Banner Card */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm space-y-6">
@@ -204,7 +131,6 @@ export const OrderConfirmationScreen: React.FC = () => {
             </p>
           </div>
 
-          {/* Print & Action Buttons */}
           <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
             <button
               onClick={handlePrint}
@@ -217,78 +143,50 @@ export const OrderConfirmationScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. Key Order Dynamic Credentials Banner */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 p-4 sm:p-5 bg-slate-50 border border-slate-200 rounded-2xl text-start">
-          {/* Dynamic Placeholder: Order ID */}
           <div className="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-                {t('orderNumber')}
-              </span>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                {language === 'ar' ? 'ديناميكي' : 'Dynamic ID'}
-              </span>
-            </div>
+            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
+              {t('orderNumber')}
+            </span>
             <div className="flex items-center justify-between gap-2 pt-1">
-              <p
-                id="dynamic-order-id-placeholder"
-                className="text-base font-black text-blue-600 font-mono tracking-tight"
-              >
-                {currentOrderId}
-              </p>
+              <p className="text-base font-black text-primary font-mono tracking-tight">{order.orderId}</p>
               <button
+                type="button"
                 onClick={handleCopyOrderId}
                 id="copy-order-id-btn"
-                className="min-h-11 min-w-11 flex items-center justify-center text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer touch-manipulation"
+                className="min-h-11 min-w-11 flex items-center justify-center text-slate-500 hover:text-primary rounded-lg hover:bg-slate-100 transition-colors cursor-pointer touch-manipulation"
                 title="Copy Order ID"
                 aria-label="Copy Order ID"
               >
-                {copiedOrderId ? (
-                  <Check className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copiedOrderId ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Dynamic Placeholder: Delivery ETA */}
           <div className="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-                {language === 'ar' ? 'موعد التسليم المتوقع' : 'Delivery ETA'}
-              </span>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {language === 'ar' ? 'تقديري' : 'Live ETA'}
-              </span>
-            </div>
+            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
+              {language === 'ar' ? 'موعد التسليم المتوقع' : 'Delivery ETA'}
+            </span>
             <div className="flex items-center gap-2 pt-1">
               <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
-              <p
-                id="dynamic-delivery-eta-placeholder"
-                className="text-xs font-black text-slate-900 line-clamp-2 leading-tight"
-              >
-                {dynamicEta}
+              <p className="text-xs font-black text-slate-900 line-clamp-2 leading-tight">
+                {order.estimatedDelivery || t('etaConfirmedOnShipping')}
               </p>
             </div>
           </div>
 
-          {/* Order Total */}
           <div className="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
             <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
               {t('orderTotal')}
             </span>
             <div className="flex items-baseline gap-1.5 pt-1">
-              <p className="text-base font-black text-slate-900">
-                {formatPrice(activeOrder.total)}
-              </p>
+              <p className="text-base font-black text-slate-900">{formatPrice(order.total)}</p>
               <span className="text-[10px] text-slate-400 font-medium">
-                ({language === 'ar' ? 'شامل الضريبة 5%' : 'Incl. 5% GCC VAT'})
+                ({language === 'ar' ? `شامل الضريبة ${client.tax.vatPercent}%` : `Incl. ${client.tax.vatPercent}% VAT`})
               </span>
             </div>
           </div>
 
-          {/* Destination */}
           <div className="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
             <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
               {t('deliveryTo')}
@@ -296,66 +194,15 @@ export const OrderConfirmationScreen: React.FC = () => {
             <div className="flex items-center gap-2 pt-1">
               <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
               <p className="text-xs font-bold text-slate-800 truncate">
-                {activeOrder.shippingAddress.city}, {activeOrder.shippingAddress.country}
+                {order.shippingAddress.city}, {order.shippingAddress.country}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Placeholder Control Toolbar (for testing dynamic content variations) */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-slate-50 to-amber-50 border border-blue-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-bold text-slate-900 block">
-                {language === 'ar' ? 'محاكي المعاينة الديناميكية للطلب' : 'Dynamic ETA & Order Placeholder Simulator'}
-              </span>
-              <p className="text-[11px] text-slate-500">
-                {language === 'ar'
-                  ? 'قم بتبديل سرعة الشحن أو إعادة توليد المعرف لاختبار الحقول الديناميكية'
-                  : 'Toggle shipping tier or re-generate reference to preview dynamic content reactivity'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs">
-              {(['standard', 'express', 'same-day'] as const).map((tier) => (
-                <button
-                  key={tier}
-                  onClick={() => handleDeliverySpeedChange(tier)}
-                  className={`min-h-11 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation flex items-center ${
-                    selectedDeliverySpeed === tier
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  {tier === 'standard' && (language === 'ar' ? 'عادي (2-3 أيام)' : 'Standard (2-3 Days)')}
-                  {tier === 'express' && (language === 'ar' ? 'سريع (غداً)' : 'Express (Tomorrow)')}
-                  {tier === 'same-day' && (language === 'ar' ? 'نفس اليوم VIP' : 'Same-Day VIP')}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={handleRegenerateDynamicPlaceholders}
-              disabled={isRegenerating}
-              className="min-h-11 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-400 text-slate-700 text-xs font-bold shadow-2xs transition-all cursor-pointer touch-manipulation active:scale-95"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isRegenerating ? 'animate-spin' : ''}`} />
-              <span>{language === 'ar' ? 'تحديث المعرف' : 'Regenerate ID'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4. Tracking Status Progress Bar */}
         <div className="space-y-4 pt-2 text-start">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {t('trackingTimeline')}
-            </h3>
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{t('trackingTimeline')}</h3>
             <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
               {language === 'ar' ? 'قيد التجهيز في مركز التوزيع' : 'In Fulfillment Center'}
             </span>
@@ -368,7 +215,7 @@ export const OrderConfirmationScreen: React.FC = () => {
               </div>
               <div>{t('statusReceived')}</div>
               <span className="text-[10px] text-slate-500 font-medium block">
-                {activeOrder.date}
+                {new Date(order.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
               </span>
             </div>
 
@@ -387,9 +234,6 @@ export const OrderConfirmationScreen: React.FC = () => {
                 <Truck className="w-5 h-5" />
               </div>
               <div>{t('statusShipped')}</div>
-              <span className="text-[10px] text-slate-400 font-normal block">
-                {language === 'ar' ? 'مع مندوب التوصيل' : 'Courier Assigned'}
-              </span>
             </div>
 
             <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-400">
@@ -398,16 +242,14 @@ export const OrderConfirmationScreen: React.FC = () => {
               </div>
               <div>{t('statusDelivered')}</div>
               <span className="text-[10px] text-slate-400 font-normal block">
-                {dynamicEta}
+                {order.estimatedDelivery || t('etaConfirmedOnShipping')}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 5. Detailed Two-Column Order Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Purchased Items List (7 cols) */}
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
@@ -417,22 +259,18 @@ export const OrderConfirmationScreen: React.FC = () => {
               </h2>
             </div>
             <span className="text-xs font-bold text-slate-500">
-              {activeOrder.items.length} {t('items')}
+              {order.items.length} {t('items')}
             </span>
           </div>
 
           <div className="divide-y divide-slate-100">
-            {activeOrder.items.map((item, idx) => (
-              <div
-                key={item.id || idx}
-                className="py-4 first:pt-1 last:pb-1 flex items-start gap-3.5 group"
-              >
+            {order.items.map((item, idx) => (
+              <div key={item.id || idx} className="py-4 first:pt-1 last:pb-1 flex items-start gap-3.5 group">
                 <img
                   src={item.product.images[0]}
                   alt={item.product.title[language]}
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-slate-50 border border-slate-200 p-1 shrink-0 group-hover:scale-103 transition-transform"
                 />
-
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2">
@@ -443,19 +281,11 @@ export const OrderConfirmationScreen: React.FC = () => {
                         {formatPrice(item.totalPrice)}
                       </span>
                     </div>
-
-                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      {item.product.brand}
-                    </div>
-
-                    {/* Variant specs */}
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">{item.product.brand}</div>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {item.selectedColor && (
                         <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium border border-slate-200 flex items-center gap-1">
-                          <span
-                            className="w-2 h-2 rounded-full border border-slate-300"
-                            style={{ backgroundColor: item.selectedColor.colorHex }}
-                          />
+                          <span className="w-2 h-2 rounded-full border border-slate-300" style={{ backgroundColor: item.selectedColor.colorHex }} />
                           <span>{item.selectedColor.name[language]}</span>
                         </span>
                       )}
@@ -466,11 +296,9 @@ export const OrderConfirmationScreen: React.FC = () => {
                       )}
                     </div>
                   </div>
-
                   <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
                     <span>
-                      {language === 'ar' ? 'الكمية' : 'Qty'}:{' '}
-                      <strong className="text-slate-800 font-bold">{item.quantity}</strong>
+                      {language === 'ar' ? 'الكمية' : 'Qty'}: <strong className="text-slate-800 font-bold">{item.quantity}</strong>
                     </span>
                     <span className="text-[11px]">
                       {language === 'ar' ? 'سعر الوحدة' : 'Unit price'}: {formatPrice(item.unitPrice)}
@@ -481,126 +309,101 @@ export const OrderConfirmationScreen: React.FC = () => {
             ))}
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>{t('valueProp2Title')}</span>
+          {client.policies.warrantyPolicy && (
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>{t('valueProp2Title')}</span>
+              </div>
+              <span>{client.policies.warrantyPolicy[language]}</span>
             </div>
-            <span>{language === 'ar' ? 'ضمان رسمي معتمد' : '100% Authorized GCC Warranty'}</span>
-          </div>
+          )}
         </div>
 
-        {/* Right: Financial Breakdown & Shipping/Payment details (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Price Calculation Card */}
           <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
             <h3 className="text-sm font-black text-slate-900 pb-2 border-b border-slate-100 uppercase tracking-wider">
               {language === 'ar' ? 'ملخص الدفع والفاتورة' : 'Payment Summary'}
             </h3>
-
             <div className="space-y-2.5 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>{t('subtotal')}</span>
-                <span className="font-semibold text-slate-900">{formatPrice(activeOrder.subtotal)}</span>
+                <span className="font-semibold text-slate-900">{formatPrice(order.subtotal)}</span>
               </div>
-
-              {activeOrder.discount > 0 && (
+              {order.discount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-semibold">
                   <span>{t('discount')}</span>
-                  <span>-{formatPrice(activeOrder.discount)}</span>
+                  <span>-{formatPrice(order.discount)}</span>
                 </div>
               )}
-
               <div className="flex justify-between text-slate-600">
                 <span className="flex items-center gap-1">
                   <span>{t('shipping')}</span>
-                  <span className="text-[10px] text-slate-400">
-                    ({selectedDeliverySpeed === 'same-day' ? 'VIP Same-Day' : selectedDeliverySpeed === 'express' ? 'Express' : 'Standard'})
-                  </span>
+                  <span className="text-[10px] text-slate-400 capitalize">({order.deliveryMethod})</span>
                 </span>
                 <span className="font-semibold text-slate-900">
-                  {activeOrder.shippingFee === 0 ? (
+                  {order.shippingFee === 0 ? (
                     <span className="text-emerald-600 font-bold">{t('freeShipping')}</span>
                   ) : (
-                    formatPrice(activeOrder.shippingFee)
+                    formatPrice(order.shippingFee)
                   )}
                 </span>
               </div>
-
               <div className="flex justify-between text-slate-600">
-                <span>{language === 'ar' ? 'ضريبة القيمة المضافة (5%)' : 'GCC VAT (5%)'}</span>
-                <span className="font-semibold text-slate-900">{formatPrice(activeOrder.tax)}</span>
+                <span>{client.tax.vatLabel[language]}</span>
+                <span className="font-semibold text-slate-900">{formatPrice(order.tax)}</span>
               </div>
-
               <div className="pt-3 border-t border-slate-200 flex justify-between items-baseline">
                 <div>
                   <span className="text-sm font-black text-slate-900 block">{t('orderTotal')}</span>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    {language === 'ar' ? 'الدفعة المسددة بالكامل' : 'Paid in full via secure gateway'}
-                  </span>
                 </div>
-                <span className="text-xl font-black text-blue-600">
-                  {formatPrice(activeOrder.total)}
-                </span>
+                <span className="text-xl font-black text-blue-600">{formatPrice(order.total)}</span>
               </div>
             </div>
           </div>
 
-          {/* Delivery & Customer Info Card */}
           <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4 text-xs">
             <h3 className="text-sm font-black text-slate-900 pb-2 border-b border-slate-100 uppercase tracking-wider">
               {language === 'ar' ? 'بيانات المستلم والتوصيل' : 'Delivery & Customer Info'}
             </h3>
-
             <div className="space-y-3">
               <div className="flex items-start gap-2.5">
                 <User className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-slate-400 font-medium block text-[10px] uppercase">
-                    {t('fullName')}
-                  </span>
-                  <p className="font-bold text-slate-900">{activeOrder.shippingAddress.fullName}</p>
+                  <span className="text-slate-400 font-medium block text-[10px] uppercase">{t('fullName')}</span>
+                  <p className="font-bold text-slate-900">{order.shippingAddress.fullName}</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5">
-                <Mail className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-slate-400 font-medium block text-[10px] uppercase">
-                    {t('emailAddress')}
-                  </span>
-                  <p className="font-semibold text-slate-800">{activeOrder.shippingAddress.email}</p>
+              {order.shippingAddress.email && (
+                <div className="flex items-start gap-2.5">
+                  <Mail className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-400 font-medium block text-[10px] uppercase">{t('emailAddress')}</span>
+                    <p className="font-semibold text-slate-800">{order.shippingAddress.email}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-slate-400 font-medium block text-[10px] uppercase">
-                    {t('phoneNumber')}
-                  </span>
-                  <p className="font-semibold text-slate-800" dir="ltr">
-                    {activeOrder.shippingAddress.phone}
-                  </p>
+                  <span className="text-slate-400 font-medium block text-[10px] uppercase">{t('phoneNumber')}</span>
+                  <p className="font-semibold text-slate-800" dir="ltr">{order.shippingAddress.phone}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-slate-400 font-medium block text-[10px] uppercase">
-                    {t('deliveryTo')}
-                  </span>
-                  <p className="font-bold text-slate-900">
-                    {activeOrder.shippingAddress.addressLine}
-                  </p>
+                  <span className="text-slate-400 font-medium block text-[10px] uppercase">{t('deliveryTo')}</span>
+                  <p className="font-bold text-slate-900">{order.shippingAddress.addressLine}</p>
                   <p className="text-slate-600">
-                    {activeOrder.shippingAddress.city}, {activeOrder.shippingAddress.country}
+                    {order.shippingAddress.city}, {order.shippingAddress.country}
                   </p>
-                  {activeOrder.shippingAddress.deliveryNotes && (
+                  {order.shippingAddress.deliveryNotes && (
                     <p className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded-md mt-1 border border-amber-200">
-                      <strong>{language === 'ar' ? 'ملاحظة:' : 'Note:'}</strong>{' '}
-                      {activeOrder.shippingAddress.deliveryNotes}
+                      <strong>{language === 'ar' ? 'ملاحظة:' : 'Note:'}</strong> {order.shippingAddress.deliveryNotes}
                     </p>
                   )}
                 </div>
@@ -609,18 +412,10 @@ export const OrderConfirmationScreen: React.FC = () => {
               <div className="flex items-start gap-2.5 pt-2 border-t border-slate-100">
                 <CreditCard className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-slate-400 font-medium block text-[10px] uppercase">
-                    {t('paymentMode')}
-                  </span>
+                  <span className="text-slate-400 font-medium block text-[10px] uppercase">{t('paymentMode')}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-bold text-slate-900 capitalize">
-                      {activeOrder.paymentMethod === 'card'
-                        ? t('paymentCard')
-                        : activeOrder.paymentMethod === 'apple_pay'
-                        ? t('paymentApplePay')
-                        : activeOrder.paymentMethod === 'tabby'
-                        ? t('paymentTabby')
-                        : t('paymentCOD')}
+                      {paymentMethodLabelById(client, order.paymentMethod, language)}
                     </span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
                       {language === 'ar' ? 'تم الدفع بنجاح' : 'Authorized'}
@@ -633,13 +428,12 @@ export const OrderConfirmationScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 6. Navigation Actions across Mobile Viewports (min-h-11 44px sizing) */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-6">
         <button
           id="order-confirmation-continue-shopping-btn"
           onClick={() => {
             setConfirmedOrder(null);
-            setActiveScreen('plp');
+            goToProducts();
           }}
           className="w-full sm:w-auto min-h-11 inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all shadow-md cursor-pointer touch-manipulation active:scale-95"
         >
@@ -651,7 +445,7 @@ export const OrderConfirmationScreen: React.FC = () => {
           id="order-confirmation-back-home-btn"
           onClick={() => {
             setConfirmedOrder(null);
-            setActiveScreen('home');
+            goHome();
           }}
           className="w-full sm:w-auto min-h-11 inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all cursor-pointer touch-manipulation active:scale-95"
         >

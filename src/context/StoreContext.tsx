@@ -1,32 +1,34 @@
+/* eslint-disable react-refresh/only-export-components -- useStore is the
+   required companion hook to StoreProvider; splitting it into a separate
+   file would only add indirection for a template of this size. */
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Language,
   Currency,
-  Screen,
-  StoreId,
-  StoreConfig,
+  Category,
   Product,
   CartItem,
-  FilterState,
   ProductVariant,
   OrderDetails,
 } from '../types/store';
-import { STORES, PRODUCTS, CURRENCY_CONFIG } from '../data/mockData';
 import { translations } from '../data/translations';
+import { activeClient } from '../config/active-client';
+import { ClientConfig } from '../config/clients/schema';
+import { readClientStorage, writeClientStorage } from '../core/storage/clientStorage';
+import { getDemoProductsForClient, getDemoCategoriesForClient } from '../core/commerce/demoCatalog';
+
+export type TranslationKey = keyof typeof translations.en;
 
 interface StoreContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   currency: Currency;
   setCurrency: (curr: Currency) => void;
-  activeStore: StoreId;
-  setActiveStore: (storeId: StoreId) => void;
-  currentStoreConfig: StoreConfig;
-  activeScreen: Screen;
-  setActiveScreen: (screen: Screen) => void;
-  selectedProductId: string;
-  setSelectedProductId: (id: string) => void;
-  selectedProduct: Product | undefined;
+  client: ClientConfig;
+  products: Product[];
+  categories: Category[];
+  getProductBySlug: (slug: string) => Product | undefined;
   cart: CartItem[];
   addToCart: (
     product: Product,
@@ -43,164 +45,82 @@ interface StoreContextType {
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
-  isWishlistOpen: boolean;
-  setIsWishlistOpen: (open: boolean) => void;
   quickViewProductId: string | null;
   setQuickViewProductId: (id: string | null) => void;
-  isCartOpen: boolean;
-  setIsCartOpen: (open: boolean) => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  filterState: FilterState;
-  setFilterState: React.Dispatch<React.SetStateAction<FilterState>>;
-  resetFilters: () => void;
   appliedCoupon: { code: string; discountPercent: number } | null;
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
-  formatPrice: (amountInAED: number) => string;
+  formatPrice: (amount: number) => string;
   t: (key: keyof typeof translations.en, params?: Record<string, string | number>) => string;
   confirmedOrder: OrderDetails | null;
   setConfirmedOrder: (order: OrderDetails | null) => void;
+  // Semantic navigation helpers backed by react-router — components never
+  // call `navigate(...)` with a raw path themselves, so the URL scheme for
+  // a given action lives in exactly one place.
   navigateToProduct: (productId: string) => void;
   navigateToCategory: (categoryId: string) => void;
+  goHome: () => void;
+  goToProducts: () => void;
+  goToCart: () => void;
+  goToWishlist: () => void;
+  goToCheckout: () => void;
+  goToOrder: (orderId: string) => void;
 }
 
-const initialFilterState: FilterState = {
-  category: 'all',
-  brands: [],
-  minPrice: 0,
-  maxPrice: 15000,
-  inStockOnly: false,
-  minRating: 0,
-  searchQuery: '',
-  sortBy: 'featured',
-  viewMode: 'grid',
-};
+const LANGUAGE_STORAGE_KEY = 'preferences:language';
+
+function resolveInitialLanguage(): Language {
+  const saved = readClientStorage<Language | null>(activeClient.id, LANGUAGE_STORAGE_KEY, null);
+  if (saved && activeClient.supportedLocales.includes(saved)) {
+    return saved;
+  }
+  // No saved preference: use the client's own default, never the browser's
+  // language — a first-time visitor always sees the client's chosen default
+  // locale/direction, not one guessed from their browser/OS settings.
+  return activeClient.defaultLocale;
+}
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Read initial URL parameters if present
-  const initialParams = useMemo(() => {
-    if (typeof window === 'undefined') return { screen: 'home', lang: 'en', store: 'voltix', product: 'prod-iphone-16-pro-max', category: 'all' };
-    const params = new URLSearchParams(window.location.search);
-    const screenParam = params.get('screen') as Screen | null;
-    const langParam = params.get('lang') as Language | null;
-    const storeParam = params.get('store') as StoreId | null;
-    const productParam = params.get('product');
-    const categoryParam = params.get('category');
+  const navigate = useNavigate();
 
-    return {
-      screen: screenParam && ['home', 'plp', 'pdp', 'checkout', 'order-confirmation'].includes(screenParam) ? screenParam : 'home',
-      lang: langParam && ['en', 'ar'].includes(langParam) ? langParam : 'en',
-      store: storeParam && ['voltix', 'apex', 'lumina'].includes(storeParam) ? storeParam : 'voltix',
-      product: productParam || 'prod-iphone-16-pro-max',
-      category: categoryParam || 'all',
-    };
-  }, []);
+  const [language, setLanguageState] = useState<Language>(resolveInitialLanguage);
+  const [currency, setCurrencyState] = useState<Currency>(() =>
+    readClientStorage<Currency>(activeClient.id, 'preferences:currency', activeClient.defaultCurrency)
+  );
+  const setCurrency = (curr: Currency) => {
+    setCurrencyState(curr);
+    writeClientStorage(activeClient.id, 'preferences:currency', curr);
+  };
 
-  const [language, setLanguageState] = useState<Language>(initialParams.lang as Language);
-  const [currency, setCurrency] = useState<Currency>('AED');
-  const [activeStore, setActiveStore] = useState<StoreId>(initialParams.store as StoreId);
-  const [activeScreen, setActiveScreen] = useState<Screen>(initialParams.screen as Screen);
-  const [selectedProductId, setSelectedProductId] = useState<string>(initialParams.product);
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      id: 'prod-iphone-16-pro-max_c-nat_s-512',
-      product: PRODUCTS[0],
-      quantity: 1,
-      selectedColor: PRODUCTS[0].variants?.colors?.[0],
-      selectedStorage: PRODUCTS[0].variants?.storage?.[1],
-      unitPrice: PRODUCTS[0].price,
-      totalPrice: PRODUCTS[0].price,
-    },
-  ]);
-  const [wishlist, setWishlist] = useState<string[]>(['prod-sony-wh1000xm5']);
-  const [isWishlistOpen, setIsWishlistOpen] = useState<boolean>(false);
+  // Cart and wishlist are namespaced per client id in localStorage, so no
+  // data from another client's deployment can ever surface in this one.
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    readClientStorage<CartItem[]>(activeClient.id, 'cart', [])
+  );
+  const [wishlist, setWishlist] = useState<string[]>(() =>
+    readClientStorage<string[]>(activeClient.id, 'wishlist', [])
+  );
+
+  useEffect(() => {
+    writeClientStorage(activeClient.id, 'cart', cart);
+  }, [cart]);
+
+  useEffect(() => {
+    writeClientStorage(activeClient.id, 'wishlist', wishlist);
+  }, [wishlist]);
+
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
-  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterState, setFilterState] = useState<FilterState>({
-    ...initialFilterState,
-    category: initialParams.category,
-  });
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercent: number } | null>(null);
   const [confirmedOrder, setConfirmedOrder] = useState<OrderDetails | null>(null);
 
-  // Sync state to URL for dynamic route indexing and deep linking
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams();
-
-    if (activeScreen !== 'home') {
-      params.set('screen', activeScreen);
-    }
-    if (activeScreen === 'pdp' && selectedProductId) {
-      params.set('product', selectedProductId);
-    }
-    if (activeScreen === 'plp' && filterState.category !== 'all') {
-      params.set('category', filterState.category);
-    }
-    if (activeStore !== 'voltix') {
-      params.set('store', activeStore);
-    }
-    if (language !== 'en') {
-      params.set('lang', language);
-    }
-
-    const newQuery = params.toString();
-    const newRelativePath = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
-    
-    // Only update if search changed
-    if (window.location.search !== (newQuery ? `?${newQuery}` : '')) {
-      window.history.replaceState({ screen: activeScreen, selectedProductId, category: filterState.category }, '', newRelativePath);
-    }
-  }, [activeScreen, selectedProductId, filterState.category, activeStore, language]);
-
-  // Handle browser Back / Forward buttons
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const screenParam = params.get('screen') as Screen | null;
-      const langParam = params.get('lang') as Language | null;
-      const storeParam = params.get('store') as StoreId | null;
-      const productParam = params.get('product');
-      const categoryParam = params.get('category');
-
-      if (screenParam && ['home', 'plp', 'pdp', 'checkout', 'order-confirmation'].includes(screenParam)) {
-        setActiveScreen(screenParam);
-      } else {
-        setActiveScreen('home');
-      }
-
-      if (productParam) {
-        setSelectedProductId(productParam);
-      }
-      if (categoryParam) {
-        setFilterState((prev) => ({ ...prev, category: categoryParam }));
-      }
-      if (storeParam && ['voltix', 'apex', 'lumina'].includes(storeParam)) {
-        setActiveStore(storeParam);
-      }
-      if (langParam && ['en', 'ar'].includes(langParam)) {
-        setLanguageState(langParam);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Sync HTML dir and lang attributes
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof document !== 'undefined') {
-      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-      document.documentElement.lang = lang;
-    }
+    writeClientStorage(activeClient.id, LANGUAGE_STORAGE_KEY, lang);
   };
 
+  // Sync HTML dir/lang attributes whenever the language changes.
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -208,13 +128,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [language]);
 
-  const currentStoreConfig = useMemo(() => {
-    return STORES.find((s) => s.id === activeStore) || STORES[0];
-  }, [activeStore]);
+  // Products/categories come from the CommerceProvider's demo catalog for
+  // this client only — no component imports mockData/demo data directly.
+  const clientProducts = useMemo(() => getDemoProductsForClient(activeClient.id), []);
+  const clientCategories = useMemo(() => getDemoCategoriesForClient(activeClient.id), []);
 
-  const selectedProduct = useMemo(() => {
-    return PRODUCTS.find((p) => p.id === selectedProductId) || PRODUCTS[0];
-  }, [selectedProductId]);
+  // A product "slug" is just its id today (see README — real slugs would
+  // come from a real CommerceProvider). No fallback to another product: an
+  // unknown slug means "not found", and callers must render a real 404.
+  const getProductBySlug = (slug: string): Product | undefined =>
+    clientProducts.find((p) => p.id === slug);
 
   // Translation helper
   const t = (key: keyof typeof translations.en, params?: Record<string, string | number>): string => {
@@ -228,14 +151,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return text;
   };
 
-  // Price formatting
-  const formatPrice = (amountInAED: number): string => {
-    const cfg = CURRENCY_CONFIG[currency];
-    const converted = amountInAED * cfg.rate;
+  // Price formatting. `amount` is always in the active client's own default
+  // currency (each client's catalog is priced directly in that currency) —
+  // the `rate` only matters for a client that genuinely offers more than one.
+  const formatPrice = (amount: number): string => {
+    const cfg =
+      activeClient.currencies.find((c) => c.code === currency) ??
+      activeClient.currencies.find((c) => c.code === activeClient.defaultCurrency)!;
+    const converted = amount * cfg.rate;
     const symbol = cfg.symbol[language];
     const formattedNumber = Math.round(converted).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US');
-    if (currency === 'USD') {
-      return `$${formattedNumber}`;
+    // A symbol that's already a prefix glyph (e.g. "$") reads wrong with a
+    // space in either direction.
+    if (symbol.length === 1) {
+      return `${symbol}${formattedNumber}`;
     }
     return language === 'ar' ? `${formattedNumber} ${symbol}` : `${symbol} ${formattedNumber}`;
   };
@@ -278,8 +207,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ];
       }
     });
-
-    setIsCartOpen(true);
   };
 
   const removeFromCart = (cartItemId: string) => {
@@ -329,16 +256,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setWishlist([]);
   };
 
-  // Coupon handling
+  // Coupon handling — demo codes come from the active client's config, not
+  // a hardcoded brand-specific list.
   const applyCoupon = (code: string) => {
     const cleanCode = code.trim().toUpperCase();
-    if (cleanCode === 'VOLTIX10') {
-      setAppliedCoupon({ code: 'VOLTIX10', discountPercent: 10 });
-      return { success: true, message: t('couponSuccess', { discount: 10 }) };
-    }
-    if (cleanCode === 'WELCOME50') {
-      setAppliedCoupon({ code: 'WELCOME50', discountPercent: 15 });
-      return { success: true, message: t('couponSuccess', { discount: 15 }) };
+    const match = activeClient.demoCouponCodes.find((c) => c.code.toUpperCase() === cleanCode);
+    if (match) {
+      setAppliedCoupon({ code: match.code, discountPercent: match.discountPercent });
+      return { success: true, message: t('couponSuccess', { discount: match.discountPercent }) };
     }
     return { success: false, message: t('couponInvalid') };
   };
@@ -347,28 +272,51 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAppliedCoupon(null);
   };
 
-  const resetFilters = () => {
-    setFilterState(initialFilterState);
-  };
-
-  // Navigators
-  const navigateToProduct = (productId: string) => {
-    setSelectedProductId(productId);
-    setActiveScreen('pdp');
+  // Navigation — the only place in the app that knows the URL scheme.
+  const scrollToTop = () => {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const navigateToProduct = (productId: string) => {
+    navigate(`/product/${encodeURIComponent(productId)}`);
+    scrollToTop();
   };
 
   const navigateToCategory = (categoryId: string) => {
-    setFilterState((prev) => ({
-      ...prev,
-      category: categoryId,
-    }));
-    setActiveScreen('plp');
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    navigate(categoryId === 'all' ? '/products' : `/category/${encodeURIComponent(categoryId)}`);
+    scrollToTop();
+  };
+
+  const goHome = () => {
+    navigate('/');
+    scrollToTop();
+  };
+
+  const goToProducts = () => {
+    navigate('/products');
+    scrollToTop();
+  };
+
+  const goToCart = () => {
+    navigate('/cart');
+    scrollToTop();
+  };
+
+  const goToWishlist = () => {
+    navigate('/wishlist');
+    scrollToTop();
+  };
+
+  const goToCheckout = () => {
+    navigate('/checkout');
+    scrollToTop();
+  };
+
+  const goToOrder = (orderId: string) => {
+    navigate(`/order/${encodeURIComponent(orderId)}`);
+    scrollToTop();
   };
 
   return (
@@ -378,14 +326,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setLanguage,
         currency,
         setCurrency,
-        activeStore,
-        setActiveStore,
-        currentStoreConfig,
-        activeScreen,
-        setActiveScreen,
-        selectedProductId,
-        setSelectedProductId,
-        selectedProduct,
+        client: activeClient,
+        products: clientProducts,
+        categories: clientCategories,
+        getProductBySlug,
         cart,
         addToCart,
         removeFromCart,
@@ -397,17 +341,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleWishlist,
         isInWishlist,
         clearWishlist,
-        isWishlistOpen,
-        setIsWishlistOpen,
         quickViewProductId,
         setQuickViewProductId,
-        isCartOpen,
-        setIsCartOpen,
-        searchQuery,
-        setSearchQuery,
-        filterState,
-        setFilterState,
-        resetFilters,
         appliedCoupon,
         applyCoupon,
         removeCoupon,
@@ -417,6 +352,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setConfirmedOrder,
         navigateToProduct,
         navigateToCategory,
+        goHome,
+        goToProducts,
+        goToCart,
+        goToWishlist,
+        goToCheckout,
+        goToOrder,
       }}
     >
       {children}

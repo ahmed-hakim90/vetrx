@@ -1,0 +1,105 @@
+import { Category } from '../../../types/store';
+
+// Shams Stores' category tree, as supplied by the business. Category images
+// are Unsplash stock photography used as placeholders — replace with real
+// photography before launch (see docs/SHAMS-LAUNCH-CHECKLIST.md).
+export const SHAMS_CATEGORIES: Category[] = [
+  {
+    id: 'cameras',
+    name: { en: 'Cameras', ar: 'الكاميرات' },
+    icon: 'Camera',
+    count: 3,
+    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'lenses',
+    name: { en: 'Lenses', ar: 'العدسات' },
+    icon: 'Aperture',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'video-production',
+    name: { en: 'Video Production', ar: 'معدات إنتاج الفيديو' },
+    icon: 'Video',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1579965342575-16428a7c8881?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'lighting',
+    name: { en: 'Lighting', ar: 'الإضاءة' },
+    icon: 'Lightbulb',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1595859703065-2259f4e4fca5?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'audio',
+    name: { en: 'Professional Audio', ar: 'الصوتيات الاحترافية' },
+    icon: 'Headphones',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1520166012956-add9ba0835cb?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'tripods-stabilizers',
+    name: { en: 'Tripods & Stabilizers', ar: 'الحوامل ومثبتات الكاميرا' },
+    icon: 'Sliders',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1606933987254-25cbb6d54cd7?w=600&q=80',
+    featured: true,
+  },
+  {
+    id: 'microphones',
+    name: { en: 'Microphones', ar: 'الميكروفونات' },
+    icon: 'Mic',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600&q=80',
+  },
+  {
+    id: 'bags-cases',
+    name: { en: 'Bags & Cases', ar: 'الحقائب والحافظات' },
+    icon: 'Briefcase',
+    count: 1,
+    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80',
+  },
+  {
+    id: 'memory-cards',
+    name: { en: 'Memory Cards', ar: 'بطاقات الذاكرة' },
+    icon: 'MemoryStick',
+    count: 1,
+    image: 'https://images.unsplash.com/photo-1618410320928-25228d8bcbe1?w=600&q=80',
+  },
+  {
+    id: 'camera-accessories',
+    name: { en: 'Camera Accessories', ar: 'إكسسوارات الكاميرات' },
+    icon: 'Camera',
+    count: 1,
+    image: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=600&q=80',
+  },
+  {
+    id: 'darkroom',
+    name: { en: 'Darkroom Equipment', ar: 'معدات غرف التحميض' },
+    icon: 'FlaskConical',
+    count: 1,
+    image: 'https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=600&q=80',
+  },
+  {
+    id: 'film',
+    name: { en: 'Photographic Film', ar: 'أفلام التصوير' },
+    icon: 'Film',
+    count: 1,
+    image: 'https://images.unsplash.com/photo-1495121553079-4c61bcce1894?w=600&q=80',
+  },
+  {
+    id: 'offers',
+    name: { en: 'Current Offers', ar: 'العروض الحالية' },
+    icon: 'Tag',
+    count: 2,
+    image: 'https://images.unsplash.com/photo-1524253482453-3fed8d2fe12b?w=600&q=80',
+    featured: true,
+  },
+];

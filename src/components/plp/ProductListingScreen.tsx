@@ -1,36 +1,35 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import {
   SlidersHorizontal,
   LayoutGrid,
   List,
-  ChevronDown,
   Star,
   Heart,
   ShoppingCart,
   Check,
   X,
-  RotateCcw,
   CheckCircle2,
-  ShieldCheck,
   Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { PRODUCTS, CATEGORIES } from '../../data/mockData';
 import { Product } from '../../types/store';
-import {
-  Skeleton,
-  ProductGridSkeleton,
-  FilterSidebarSkeleton,
-} from '../feedback';
+import { activatableCardProps } from '../../core/a11y/activatableCard';
+import { Skeleton, ProductGridSkeleton, FilterSidebarSkeleton } from '../feedback';
 import { Breadcrumb } from '../common/Breadcrumb';
+import { CategoryNotFound } from '../common/NotFoundPage';
+
+type SortBy = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest';
+type ViewMode = 'grid' | 'list';
 
 export const ProductListingScreen: React.FC = () => {
+  const location = useLocation();
+  const { categorySlug } = useParams<{ categorySlug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     language,
-    activeStore,
-    filterState,
-    setFilterState,
-    resetFilters,
+    products,
+    categories,
     t,
     formatPrice,
     addToCart,
@@ -38,111 +37,120 @@ export const ProductListingScreen: React.FC = () => {
     isInWishlist,
     setQuickViewProductId,
     navigateToProduct,
-    setActiveScreen,
   } = useStore();
+
+  const isSearchRoute = location.pathname === '/search';
+  const category = isSearchRoute ? 'all' : categorySlug ?? 'all';
+  const searchQuery = isSearchRoute ? searchParams.get('q') ?? '' : '';
+
+  // /category/:slug with an id that doesn't exist in this client's own
+  // catalog renders a real "not found" state instead of silently showing
+  // every product.
+  const categoryExists = category === 'all' || categories.some((c) => c.id === category);
+
+  const brands = useMemo(() => searchParams.getAll('brand'), [searchParams]);
+  const minPrice = Number(searchParams.get('minPrice') ?? 0);
+  const maxPrice = Number(searchParams.get('maxPrice') ?? 15000);
+  const inStockOnly = searchParams.get('inStock') === '1';
+  const minRating = Number(searchParams.get('minRating') ?? 0);
+  const sortBy = (searchParams.get('sort') as SortBy) || 'featured';
+  const viewMode = (searchParams.get('view') as ViewMode) || 'grid';
+
+  const updateParams = (mutate: (params: URLSearchParams) => void) => {
+    const next = new URLSearchParams(searchParams);
+    mutate(next);
+    setSearchParams(next, { replace: true });
+  };
 
   const [isHydrating, setIsHydrating] = useState(true);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
 
-  // Initial state hydration simulation to display skeleton feedback for perceived performance
   useEffect(() => {
     setIsHydrating(true);
-    const timer = setTimeout(() => {
-      setIsHydrating(false);
-    }, 600);
+    const timer = setTimeout(() => setIsHydrating(false), 500);
     return () => clearTimeout(timer);
-  }, [filterState.category, activeStore]);
+  }, [category, searchQuery]);
 
-  // Available brands in the catalog
   const availableBrands = useMemo(() => {
-    const brandsSet = new Set(PRODUCTS.map((p) => p.brand));
-    return Array.from(brandsSet);
-  }, []);
+    return Array.from(new Set(products.map((p) => p.brand)));
+  }, [products]);
 
-  // Filter products
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((product) => {
-      // 1. Store filtering
-      if (activeStore !== 'voltix' && product.storeId !== activeStore) {
-        return false;
-      }
-      // 2. Category filtering
-      if (filterState.category !== 'all' && product.category !== filterState.category) {
-        return false;
-      }
-      // 3. Brand filtering
-      if (filterState.brands.length > 0 && !filterState.brands.includes(product.brand)) {
-        return false;
-      }
-      // 4. Price filtering
-      if (product.price < filterState.minPrice || product.price > filterState.maxPrice) {
-        return false;
-      }
-      // 5. In-stock filtering
-      if (filterState.inStockOnly && !product.inStock) {
-        return false;
-      }
-      // 6. Rating filtering
-      if (product.rating < filterState.minRating) {
-        return false;
-      }
-      // 7. Search query filtering
-      if (filterState.searchQuery.trim()) {
-        const q = filterState.searchQuery.toLowerCase();
-        const titleMatch =
-          product.title.en.toLowerCase().includes(q) ||
-          product.title.ar.toLowerCase().includes(q) ||
-          product.brand.toLowerCase().includes(q);
-        if (!titleMatch) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      if (filterState.sortBy === 'price-asc') return a.price - b.price;
-      if (filterState.sortBy === 'price-desc') return b.price - a.price;
-      if (filterState.sortBy === 'rating') return b.rating - a.rating;
-      if (filterState.sortBy === 'newest') return (b.badge?.type === 'new' ? 1 : 0) - (a.badge?.type === 'new' ? 1 : 0);
-      return b.reviewCount - a.reviewCount; // 'featured'
-    });
-  }, [PRODUCTS, activeStore, filterState]);
+    return products
+      .filter((product) => {
+        if (category !== 'all' && product.category !== category) return false;
+        if (brands.length > 0 && !brands.includes(product.brand)) return false;
+        if (product.price < minPrice || product.price > maxPrice) return false;
+        if (inStockOnly && !product.inStock) return false;
+        if (product.rating < minRating) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const titleMatch =
+            product.title.en.toLowerCase().includes(q) ||
+            product.title.ar.toLowerCase().includes(q) ||
+            product.brand.toLowerCase().includes(q);
+          if (!titleMatch) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-asc') return a.price - b.price;
+        if (sortBy === 'price-desc') return b.price - a.price;
+        if (sortBy === 'rating') return b.rating - a.rating;
+        if (sortBy === 'newest') return (b.badge?.type === 'new' ? 1 : 0) - (a.badge?.type === 'new' ? 1 : 0);
+        return b.reviewCount - a.reviewCount;
+      });
+  }, [products, category, brands, minPrice, maxPrice, inStockOnly, minRating, searchQuery, sortBy]);
 
   const handleBrandToggle = (brand: string) => {
-    setFilterState((prev) => {
-      const exists = prev.brands.includes(brand);
-      return {
-        ...prev,
-        brands: exists ? prev.brands.filter((b) => b !== brand) : [...prev.brands, brand],
-      };
+    updateParams((p) => {
+      const current = p.getAll('brand');
+      p.delete('brand');
+      const next = current.includes(brand) ? current.filter((b) => b !== brand) : [...current, brand];
+      next.forEach((b) => p.append('brand', b));
+    });
+  };
+
+  const resetFilters = () => {
+    updateParams((p) => {
+      p.delete('brand');
+      p.delete('minPrice');
+      p.delete('maxPrice');
+      p.delete('inStock');
+      p.delete('minRating');
     });
   };
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(
-      product,
-      1,
-      product.variants?.colors?.[0],
-      product.variants?.storage?.[0]
-    );
+    addToCart(product, 1, product.variants?.colors?.[0], product.variants?.storage?.[0]);
     setAddedId(product.id);
     setTimeout(() => setAddedId(null), 1500);
   };
 
-  const activeCategoryObj = CATEGORIES.find((c) => c.id === filterState.category);
+  if (!categoryExists) {
+    return <CategoryNotFound />;
+  }
+
+  const activeCategoryObj = categories.find((c) => c.id === category);
+  const hasActiveFilters = brands.length > 0 || category !== 'all' || inStockOnly || minRating > 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 pb-20">
-      {/* 1. Dynamic Breadcrumbs */}
       <Breadcrumb />
 
-      {/* 2. Top Title & Control Toolbar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              {activeCategoryObj ? activeCategoryObj.name[language] : t('allProductsTitle')}
+              {isSearchRoute
+                ? t('searchResultsFor', { query: searchQuery })
+                : activeCategoryObj
+                ? activeCategoryObj.name[language]
+                : t('allProductsTitle')}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5 min-h-[20px] flex items-center gap-1.5">
+            <div className="text-xs text-slate-500 mt-0.5 min-h-[20px] flex items-center gap-1.5">
               {isHydrating ? (
                 <span className="inline-flex items-center gap-1 text-slate-400">
                   <span>{t('showingResults')}</span>
@@ -153,14 +161,14 @@ export const ProductListingScreen: React.FC = () => {
                 </span>
               ) : (
                 <>
-                  {t('showingResults')} <span className="font-bold text-slate-800">{filteredProducts.length}</span> {t('of')} <span className="font-bold text-slate-800">{PRODUCTS.length}</span> {t('results')}
+                  {t('showingResults')} <span className="font-bold text-slate-800">{filteredProducts.length}</span>{' '}
+                  {t('of')} <span className="font-bold text-slate-800">{products.length}</span> {t('results')}
                 </>
               )}
-            </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
-            {/* Mobile Filter Drawer Button */}
             <button
               id="mobile-filter-trigger-btn"
               onClick={() => setMobileFiltersOpen(true)}
@@ -168,23 +176,15 @@ export const ProductListingScreen: React.FC = () => {
             >
               <SlidersHorizontal className="w-4 h-4" />
               <span>{t('filters')}</span>
-              {(filterState.brands.length > 0 || filterState.category !== 'all' || filterState.inStockOnly) && (
-                <span className="w-2 h-2 rounded-full bg-blue-600" />
-              )}
+              {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-blue-600" />}
             </button>
 
-            {/* Sorting Dropdown */}
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-500 hidden sm:inline">{t('sortBy')}</span>
               <select
                 id="plp-sort-selector"
-                value={filterState.sortBy}
-                onChange={(e) =>
-                  setFilterState((prev) => ({
-                    ...prev,
-                    sortBy: e.target.value as any,
-                  }))
-                }
+                value={sortBy}
+                onChange={(e) => updateParams((p) => p.set('sort', e.target.value))}
                 aria-label={t('sortBy')}
                 className="min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer touch-manipulation"
               >
@@ -196,15 +196,12 @@ export const ProductListingScreen: React.FC = () => {
               </select>
             </div>
 
-            {/* View Mode Toggle (Grid vs List) + Rehydrate simulator */}
             <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
                 id="plp-grid-view-btn"
-                onClick={() => setFilterState((prev) => ({ ...prev, viewMode: 'grid' }))}
+                onClick={() => updateParams((p) => p.set('view', 'grid'))}
                 className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors cursor-pointer touch-manipulation ${
-                  filterState.viewMode === 'grid'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                  viewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title={t('gridView')}
                 aria-label={t('gridView')}
@@ -213,93 +210,46 @@ export const ProductListingScreen: React.FC = () => {
               </button>
               <button
                 id="plp-list-view-btn"
-                onClick={() => setFilterState((prev) => ({ ...prev, viewMode: 'list' }))}
+                onClick={() => updateParams((p) => p.set('view', 'list'))}
                 className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors cursor-pointer touch-manipulation ${
-                  filterState.viewMode === 'list'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
+                  viewMode === 'list' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title={t('listView')}
                 aria-label={t('listView')}
               >
                 <List className="w-4 h-4" />
               </button>
-              <button
-                id="plp-rehydrate-sim-btn"
-                onClick={() => {
-                  setIsHydrating(true);
-                  setTimeout(() => setIsHydrating(false), 600);
-                }}
-                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-800 transition-colors cursor-pointer touch-manipulation active:scale-90"
-                title="Simulate Initial State Hydration"
-                aria-label="Simulate Initial State Hydration"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Active Filter Chips */}
-        {(filterState.category !== 'all' ||
-          filterState.brands.length > 0 ||
-          filterState.inStockOnly ||
-          filterState.minRating > 0) && (
+        {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
             <span className="text-xs text-slate-400 font-semibold">{t('filters')}:</span>
-
-            {filterState.category !== 'all' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold">
-                <span>{activeCategoryObj?.name[language]}</span>
-                <button
-                  onClick={() => setFilterState((prev) => ({ ...prev, category: 'all' }))}
-                  className="hover:text-blue-900 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-
-            {filterState.brands.map((b) => (
-              <span
-                key={b}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold"
-              >
+            {brands.map((b) => (
+              <span key={b} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold">
                 <span>{b}</span>
-                <button
-                  onClick={() => handleBrandToggle(b)}
-                  className="hover:text-slate-950 cursor-pointer"
-                >
+                <button onClick={() => handleBrandToggle(b)} className="hover:text-slate-950 cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             ))}
-
-            {filterState.inStockOnly && (
+            {inStockOnly && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
                 <span>{t('inStockOnly')}</span>
-                <button
-                  onClick={() => setFilterState((prev) => ({ ...prev, inStockOnly: false }))}
-                  className="hover:text-emerald-900 cursor-pointer"
-                >
+                <button onClick={() => updateParams((p) => p.delete('inStock'))} className="hover:text-emerald-900 cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
-
-            <button
-              onClick={resetFilters}
-              className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-auto cursor-pointer"
-            >
+            <button onClick={resetFilters} className="text-xs text-rose-600 hover:text-rose-700 font-bold ml-auto cursor-pointer">
               {t('clearAll')}
             </button>
           </div>
         )}
       </div>
 
-      {/* 3. Main Grid Layout: Filters Sidebar (Desktop) + Product Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Desktop Filter Sidebar */}
         {isHydrating ? (
           <FilterSidebarSkeleton className="hidden lg:block sticky top-24" />
         ) : (
@@ -309,168 +259,87 @@ export const ProductListingScreen: React.FC = () => {
                 <SlidersHorizontal className="w-4 h-4 text-blue-600" />
                 <span>{t('filterBy')}</span>
               </h3>
-              <button
-                onClick={resetFilters}
-                className="text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
-              >
+              <button onClick={resetFilters} className="text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer">
                 {t('clearAll')}
               </button>
             </div>
 
-          {/* Categories List */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {t('categoriesMega')}
-            </h4>
-            <div className="space-y-1 text-xs">
-              <button
-                onClick={() => setFilterState((prev) => ({ ...prev, category: 'all' }))}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-start transition-colors cursor-pointer ${
-                  filterState.category === 'all'
-                    ? 'bg-blue-50 text-blue-700 font-bold'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <span>{t('tabAll')}</span>
-                <span className="text-[11px] text-slate-400">{PRODUCTS.length}</span>
-              </button>
-              {CATEGORIES.map((cat) => {
-                const isSelected = filterState.category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setFilterState((prev) => ({ ...prev, category: cat.id }))}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-start transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-50 text-blue-700 font-bold'
-                        : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{cat.name[language]}</span>
-                    <span className="text-[11px] text-slate-400">{cat.count}</span>
-                  </button>
-                );
-              })}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{t('priceRange')}</h4>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-blue-600">{formatPrice(maxPrice)}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="15000"
+                step="250"
+                value={maxPrice}
+                onChange={(e) => updateParams((p) => p.set('maxPrice', e.target.value))}
+                className="w-full accent-blue-600 cursor-pointer"
+              />
+              <div className="flex justify-between text-[11px] text-slate-400">
+                <span>{formatPrice(0)}</span>
+                <span>{formatPrice(15000)}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Price Range Slider */}
-          <div className="space-y-3 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                {t('priceRange')}
-              </h4>
-              <span className="text-xs font-bold text-blue-600">
-                {formatPrice(filterState.maxPrice)}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="15000"
-              step="250"
-              value={filterState.maxPrice}
-              onChange={(e) =>
-                setFilterState((prev) => ({ ...prev, maxPrice: Number(e.target.value) }))
-              }
-              className="w-full accent-blue-600 cursor-pointer"
-            />
-            <div className="flex justify-between text-[11px] text-slate-400">
-              <span>{formatPrice(0)}</span>
-              <span>{formatPrice(15000)}</span>
-            </div>
-          </div>
-
-          {/* Brands Filter */}
-          <div className="space-y-2 pt-3 border-t border-slate-100">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {t('brands')}
-            </h4>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {availableBrands.map((brand) => {
-                const checked = filterState.brands.includes(brand);
-                return (
-                  <label
-                    key={brand}
-                    className="flex items-center gap-2.5 text-xs text-slate-700 hover:text-slate-900 cursor-pointer"
-                  >
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{t('brands')}</h4>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {availableBrands.map((brand) => (
+                  <label key={brand} className="flex items-center gap-2.5 text-xs text-slate-700 hover:text-slate-900 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={checked}
+                      checked={brands.includes(brand)}
                       onChange={() => handleBrandToggle(brand)}
                       className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                     />
                     <span>{brand}</span>
                   </label>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* In Stock Only Switch */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700">{t('inStockOnly')}</span>
-            <input
-              type="checkbox"
-              checked={filterState.inStockOnly}
-              onChange={(e) =>
-                setFilterState((prev) => ({ ...prev, inStockOnly: e.target.checked }))
-              }
-              className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-            />
-          </div>
-
-          {/* Customer Rating Filter */}
-          <div className="space-y-2 pt-3 border-t border-slate-100">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {t('customerRating')}
-            </h4>
-            <div className="space-y-1.5 text-xs">
-              {[4.8, 4.5, 4.0].map((ratingVal) => (
-                <button
-                  key={ratingVal}
-                  onClick={() =>
-                    setFilterState((prev) => ({
-                      ...prev,
-                      minRating: prev.minRating === ratingVal ? 0 : ratingVal,
-                    }))
-                  }
-                  className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-start cursor-pointer ${
-                    filterState.minRating === ratingVal
-                      ? 'bg-amber-50 text-amber-900 font-bold'
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  </div>
-                  <span>
-                    {ratingVal} {t('andAbove')}
-                  </span>
-                </button>
-              ))}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700">{t('inStockOnly')}</span>
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(e) => updateParams((p) => (e.target.checked ? p.set('inStock', '1') : p.delete('inStock')))}
+                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+              />
             </div>
-          </div>
-        </aside>
+
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{t('customerRating')}</h4>
+              <div className="space-y-1.5 text-xs">
+                {[4.8, 4.5, 4.0].map((ratingVal) => (
+                  <button
+                    key={ratingVal}
+                    onClick={() => updateParams((p) => (minRating === ratingVal ? p.delete('minRating') : p.set('minRating', String(ratingVal))))}
+                    className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-start cursor-pointer ${
+                      minRating === ratingVal ? 'bg-amber-50 text-amber-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{ratingVal} {t('andAbove')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
         )}
 
-        {/* Products Stream */}
         <div className="lg:col-span-3">
           {isHydrating ? (
-            <ProductGridSkeleton
-              count={6}
-              viewMode={filterState.viewMode}
-              columns={3}
-            />
+            <ProductGridSkeleton count={6} viewMode={viewMode} columns={3} />
           ) : filteredProducts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
               <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                 <SlidersHorizontal className="w-8 h-8" />
               </div>
               <h3 className="text-base font-bold text-slate-900">{t('noProductsFound')}</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Try loosening your price filters, selecting other brands, or searching for broader terms.
-              </p>
               <button
                 onClick={resetFilters}
                 className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
@@ -478,15 +347,14 @@ export const ProductListingScreen: React.FC = () => {
                 {t('resetFilters')}
               </button>
             </div>
-          ) : filterState.viewMode === 'grid' ? (
-            /* Grid View */
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredProducts.map((product) => {
                 const inWish = isInWishlist(product.id);
                 return (
                   <div
                     key={product.id}
-                    onClick={() => navigateToProduct(product.id)}
+                    {...activatableCardProps(() => navigateToProduct(product.id))}
                     className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all flex flex-col justify-between overflow-hidden cursor-pointer shadow-2xs"
                   >
                     <div className="relative bg-slate-50 p-4 aspect-square flex items-center justify-center overflow-hidden">
@@ -495,15 +363,11 @@ export const ProductListingScreen: React.FC = () => {
                         alt={product.title[language]}
                         className="w-full h-full object-contain transform transition-transform duration-300 group-hover:scale-105"
                       />
-
-                      {/* Badges */}
                       {product.badge && (
                         <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-xs">
                           {product.badge.text[language]}
                         </span>
                       )}
-
-                      {/* Action buttons (Wishlist & Quick View) */}
                       <div className="absolute top-2.5 right-2.5 rtl:right-auto rtl:left-2.5 flex flex-col gap-1.5 z-10">
                         <button
                           onClick={(e) => {
@@ -511,18 +375,13 @@ export const ProductListingScreen: React.FC = () => {
                             toggleWishlist(product.id);
                           }}
                           className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs touch-manipulation active:scale-90 ${
-                            inWish
-                              ? 'bg-rose-50 text-rose-500'
-                              : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
+                            inWish ? 'bg-rose-50 text-rose-500' : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
                           }`}
                           title={t('addToWishlist')}
                           aria-label={t('addToWishlist')}
                         >
-                          <Heart
-                            className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
-                          />
+                          <Heart className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`} />
                         </button>
-
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -541,17 +400,17 @@ export const ProductListingScreen: React.FC = () => {
                       <div>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
                           <span className="font-bold uppercase tracking-wider">{product.brand}</span>
-                          <div className="flex items-center gap-1 text-amber-500 font-bold">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                            <span>{product.rating}</span>
-                            <span className="text-slate-400">({product.reviewCount})</span>
-                          </div>
+                          {product.reviewCount > 0 && (
+                            <div className="flex items-center gap-1 text-amber-500 font-bold">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                              <span>{product.rating}</span>
+                              <span className="text-slate-400">({product.reviewCount})</span>
+                            </div>
+                          )}
                         </div>
-
                         <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
                           {product.title[language]}
                         </h3>
-
                         {product.shortSpecs?.[0] && (
                           <p className="text-[11px] text-slate-500 mt-1 line-clamp-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                             {product.shortSpecs[0][language]}
@@ -561,21 +420,17 @@ export const ProductListingScreen: React.FC = () => {
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                         <div>
-                          <div className="text-base font-black text-slate-900">
-                            {formatPrice(product.price)}
-                          </div>
+                          <div className="text-base font-black text-slate-900">{formatPrice(product.price)}</div>
                           {product.originalPrice && (
-                            <div className="text-[11px] text-slate-400 line-through">
-                              {formatPrice(product.originalPrice)}
-                            </div>
+                            <div className="text-[11px] text-slate-400 line-through">{formatPrice(product.originalPrice)}</div>
                           )}
                         </div>
-
                         <button
                           onClick={(e) => handleQuickAdd(product, e)}
-                          className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 touch-manipulation active:scale-95"
-                          title={t('addToCart')}
-                          aria-label={t('addToCart')}
+                          disabled={!product.inStock}
+                          className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 touch-manipulation active:scale-95"
+                          title={product.inStock ? t('addToCart') : t('outOfStock')}
+                          aria-label={product.inStock ? t('addToCart') : t('outOfStock')}
                         >
                           {addedId === product.id ? (
                             <>
@@ -585,7 +440,7 @@ export const ProductListingScreen: React.FC = () => {
                           ) : (
                             <>
                               <ShoppingCart className="w-4 h-4" />
-                              <span>{t('addToCart')}</span>
+                              <span>{product.inStock ? t('addToCart') : t('outOfStock')}</span>
                             </>
                           )}
                         </button>
@@ -596,22 +451,17 @@ export const ProductListingScreen: React.FC = () => {
               })}
             </div>
           ) : (
-            /* List View */
             <div className="space-y-4">
               {filteredProducts.map((product) => {
                 const inWish = isInWishlist(product.id);
                 return (
                   <div
                     key={product.id}
-                    onClick={() => navigateToProduct(product.id)}
+                    {...activatableCardProps(() => navigateToProduct(product.id))}
                     className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all p-4 flex flex-col sm:flex-row gap-5 items-center cursor-pointer shadow-2xs"
                   >
                     <div className="relative w-full sm:w-44 h-44 bg-slate-50 rounded-xl p-2 shrink-0 flex items-center justify-center">
-                      <img
-                        src={product.images[0]}
-                        alt={product.title[language]}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                      />
+                      <img src={product.images[0]} alt={product.title[language]} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
                       {product.badge && (
                         <span className="absolute top-2 left-2 rtl:left-auto rtl:right-2 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-500 text-white">
                           {product.badge.text[language]}
@@ -622,27 +472,19 @@ export const ProductListingScreen: React.FC = () => {
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span className="font-bold uppercase tracking-wider">{product.brand}</span>
-                        <div className="flex items-center gap-1 text-amber-500 font-bold">
-                          <Star className="w-3.5 h-3.5 fill-amber-400" />
-                          <span>{product.rating}</span>
-                          <span className="text-slate-400">({product.reviewCount})</span>
-                        </div>
+                        {product.reviewCount > 0 && (
+                          <div className="flex items-center gap-1 text-amber-500 font-bold">
+                            <Star className="w-3.5 h-3.5 fill-amber-400" />
+                            <span>{product.rating}</span>
+                            <span className="text-slate-400">({product.reviewCount})</span>
+                          </div>
+                        )}
                       </div>
-
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {product.title[language]}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 line-clamp-2">
-                        {product.description[language]}
-                      </p>
-
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{product.title[language]}</h3>
+                      <p className="text-xs text-slate-500 line-clamp-2">{product.description[language]}</p>
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {product.shortSpecs.map((spec, i) => (
-                          <span
-                            key={i}
-                            className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium"
-                          >
+                          <span key={i} className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
                             {spec[language]}
                           </span>
                         ))}
@@ -651,24 +493,18 @@ export const ProductListingScreen: React.FC = () => {
 
                     <div className="w-full sm:w-48 pt-4 sm:pt-0 sm:border-l rtl:sm:border-l-0 rtl:sm:border-r border-slate-100 sm:pl-5 rtl:sm:pl-0 rtl:sm:pr-5 flex flex-col justify-between gap-3 text-start">
                       <div>
-                        <div className="text-xl font-black text-slate-900">
-                          {formatPrice(product.price)}
-                        </div>
-                        {product.originalPrice && (
-                          <div className="text-xs text-slate-400 line-through">
-                            {formatPrice(product.originalPrice)}
-                          </div>
-                        )}
-                        <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                        <div className="text-xl font-black text-slate-900">{formatPrice(product.price)}</div>
+                        {product.originalPrice && <div className="text-xs text-slate-400 line-through">{formatPrice(product.originalPrice)}</div>}
+                        <span className={`text-[10px] font-bold flex items-center gap-1 mt-1 ${product.inStock ? 'text-emerald-600' : 'text-rose-500'}`}>
                           <CheckCircle2 className="w-3 h-3" />
-                          {t('inStock')}
+                          {product.inStock ? t('inStock') : t('outOfStock')}
                         </span>
                       </div>
-
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={(e) => handleQuickAdd(product, e)}
-                          className="flex-1 min-h-[44px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-95"
+                          disabled={!product.inStock}
+                          className="flex-1 min-h-[44px] bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-95"
                           title={t('addToCart')}
                         >
                           <ShoppingCart className="w-4 h-4" />
@@ -708,12 +544,13 @@ export const ProductListingScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Filter Drawer Modal */}
       {mobileFiltersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden overflow-hidden">
-          <div
+          <button
+            type="button"
             onClick={() => setMobileFiltersOpen(false)}
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            aria-label={t('close')}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity cursor-default"
           />
           <div className="fixed inset-y-0 right-0 rtl:right-auto rtl:left-0 max-w-full flex pl-0 sm:pl-10 rtl:pr-0 rtl:sm:pr-10">
             <div className="w-screen max-w-xs sm:max-w-sm bg-white p-5 flex flex-col justify-between shadow-2xl">
@@ -721,9 +558,7 @@ export const ProductListingScreen: React.FC = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-                    <h3 className="font-black text-sm text-slate-900 uppercase">
-                      {t('filters')}
-                    </h3>
+                    <h3 className="font-black text-sm text-slate-900 uppercase">{t('filters')}</h3>
                   </div>
                   <button
                     onClick={() => setMobileFiltersOpen(false)}
@@ -734,82 +569,14 @@ export const ProductListingScreen: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Categories */}
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    {t('shopByCategory')}
-                  </h4>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => setFilterState((prev) => ({ ...prev, category: 'all' }))}
-                      className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-start transition-colors touch-manipulation ${
-                        filterState.category === 'all'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{t('categoriesMega')}</span>
-                      <span className="text-[11px] opacity-80">{PRODUCTS.length}</span>
-                    </button>
-                    {CATEGORIES.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setFilterState((prev) => ({ ...prev, category: cat.id }))}
-                        className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-start transition-colors touch-manipulation ${
-                          filterState.category === cat.id
-                            ? 'bg-blue-600 text-white'
-                            : 'text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span>{cat.name[language]}</span>
-                        <span className="text-[11px] opacity-80">{cat.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Price Range Slider */}
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    <span>{t('priceRange')}</span>
-                    <span className="text-blue-600 font-black">
-                      {formatPrice(filterState.maxPrice)}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="100"
-                    max="15000"
-                    step="100"
-                    value={filterState.maxPrice}
-                    onChange={(e) =>
-                      setFilterState((prev) => ({
-                        ...prev,
-                        maxPrice: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full accent-blue-600 cursor-pointer h-3"
-                  />
-                  <div className="flex justify-between text-[11px] text-slate-500">
-                    <span>{formatPrice(0)}</span>
-                    <span>{formatPrice(15000)}</span>
-                  </div>
-                </div>
-
-                {/* Brands */}
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    {t('brands')}
-                  </h4>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('brands')}</h4>
                   <div className="space-y-1.5 max-h-44 overflow-y-auto">
                     {availableBrands.map((b) => (
-                      <label
-                        key={b}
-                        className="min-h-11 flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:text-slate-950 px-1 touch-manipulation"
-                      >
+                      <label key={b} className="min-h-11 flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:text-slate-950 px-1 touch-manipulation">
                         <input
                           type="checkbox"
-                          checked={filterState.brands.includes(b)}
+                          checked={brands.includes(b)}
                           onChange={() => handleBrandToggle(b)}
                           className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
                         />
@@ -819,45 +586,14 @@ export const ProductListingScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {/* In Stock Only Switch */}
                 <div className="min-h-[44px] flex items-center justify-between pt-2 border-t border-slate-100">
                   <span className="text-xs font-bold text-slate-800">{t('inStockOnly')}</span>
                   <input
                     type="checkbox"
-                    checked={filterState.inStockOnly}
-                    onChange={(e) =>
-                      setFilterState((prev) => ({ ...prev, inStockOnly: e.target.checked }))
-                    }
+                    checked={inStockOnly}
+                    onChange={(e) => updateParams((p) => (e.target.checked ? p.set('inStock', '1') : p.delete('inStock')))}
                     className="rounded text-blue-600 w-5 h-5 cursor-pointer touch-manipulation"
                   />
-                </div>
-
-                {/* Customer Rating */}
-                <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                    {t('customerRating')}
-                  </span>
-                  <div className="space-y-1">
-                    {[4.5, 4.0, 3.5].map((ratingVal) => (
-                      <button
-                        key={ratingVal}
-                        onClick={() =>
-                          setFilterState((prev) => ({
-                            ...prev,
-                            minRating: prev.minRating === ratingVal ? 0 : ratingVal,
-                          }))
-                        }
-                        className={`w-full min-h-[44px] flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer touch-manipulation ${
-                          filterState.minRating === ratingVal
-                            ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                            : 'text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                        <span>{ratingVal} {t('andAbove')}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
 

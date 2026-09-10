@@ -2,36 +2,29 @@ import React, { useState } from 'react';
 import {
   X,
   Star,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
   ShoppingCart,
-  Zap,
-  ArrowRight,
-  ArrowLeft,
   Check,
-  CreditCard,
   ExternalLink,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { PRODUCTS } from '../../data/mockData';
-import { ProductVariant } from '../../types/store';
+import { Product, ProductVariant } from '../../types/store';
 
+// A thin wrapper so the hooks in the content below are never called
+// conditionally: this component either renders nothing or mounts the
+// content component fresh for the selected product (never both).
 export const QuickViewModal: React.FC = () => {
-  const {
-    quickViewProductId,
-    setQuickViewProductId,
-    addToCart,
-    formatPrice,
-    language,
-    t,
-    navigateToProduct,
-  } = useStore();
-
+  const { quickViewProductId, products } = useStore();
   if (!quickViewProductId) return null;
 
-  const product = PRODUCTS.find((p) => p.id === quickViewProductId);
+  const product = products.find((p) => p.id === quickViewProductId);
   if (!product) return null;
+
+  return <QuickViewModalContent key={product.id} product={product} />;
+};
+
+const QuickViewModalContent: React.FC<{ product: Product }> = ({ product }) => {
+  const { client, setQuickViewProductId, addToCart, formatPrice, language, t, navigateToProduct } =
+    useStore();
 
   const [selectedColor, setSelectedColor] = useState<ProductVariant | undefined>(
     product.variants?.colors?.[0]
@@ -46,8 +39,9 @@ export const QuickViewModal: React.FC = () => {
   const currentPrice = product.price + priceAdjustment;
   const originalPrice = product.originalPrice ? product.originalPrice + priceAdjustment : undefined;
   const installment4 = Math.round(currentPrice / 4);
-
-  const ArrowIcon = language === 'ar' ? ArrowLeft : ArrowRight;
+  const bnplEnabled = client.paymentMethods.some(
+    (p) => p.enabled && (p.id === 'tabby' || p.id === 'tamara')
+  );
 
   const handleAddToCart = () => {
     addToCart(product, 1, selectedColor, selectedStorage);
@@ -66,9 +60,11 @@ export const QuickViewModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
         onClick={() => setQuickViewProductId(null)}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+        aria-label={t('close')}
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in cursor-default"
       />
 
       {/* Modal Card (Bottom-sheet on small mobile, rounded dialog on tablet/desktop) */}
@@ -127,10 +123,12 @@ export const QuickViewModal: React.FC = () => {
                 )}
               </div>
 
-              {/* Installment preview */}
-              <div className="mt-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg inline-block font-semibold">
-                {t('installmentText', { amount: formatPrice(installment4) })} <strong>Tabby</strong>
-              </div>
+              {/* Installment preview — only when this client enables a BNPL method */}
+              {bnplEnabled && (
+                <div className="mt-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg inline-block font-semibold">
+                  {t('installmentText', { amount: formatPrice(installment4) })}
+                </div>
+              )}
             </div>
 
             {/* Colors */}

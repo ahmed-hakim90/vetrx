@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shams-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port=3200", "--strictPort", "--mode", "shams"],
+      "port": 3200
+    },
+    {
+      "name": "voltix-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port=3201", "--strictPort", "--mode", "voltix"],
+      "port": 3201
+    }
+  ]
+}

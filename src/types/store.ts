@@ -1,22 +1,16 @@
 export type Language = 'en' | 'ar';
-export type Currency = 'AED' | 'SAR' | 'USD';
+// A currency code declared by the active client (see ClientConfig.currencies).
+// Deliberately not a fixed union: hardcoding every market's currency codes
+// here would ship them all in every client's bundle.
+export type Currency = string;
 export type Screen = 'home' | 'plp' | 'pdp' | 'checkout' | 'order-confirmation';
-export type StoreId = 'voltix' | 'apex' | 'lumina';
+// Identifies which example client a demo product belongs to in the shared
+// demo catalog (src/data/mockData.ts) — not a live, user-facing store switch.
+export type StoreId = 'voltix' | 'apex' | 'lumina' | 'shams';
 
 export interface LocalizedString {
   en: string;
   ar: string;
-}
-
-export interface StoreConfig {
-  id: StoreId;
-  name: LocalizedString;
-  tagline: LocalizedString;
-  badge: LocalizedString;
-  primaryColor: string;
-  accentColor: string;
-  chipClass: string;
-  bannerGradient: string;
 }
 
 export interface Category {
@@ -84,6 +78,9 @@ export interface Product {
   isFeatured?: boolean;
   isFlashDeal?: boolean;
   flashDealSoldPercentage?: number;
+  // Marks this as demo/placeholder catalog data (not a real, sellable
+  // listing) — set on every product shipped with this template.
+  isDemo?: boolean;
 }
 
 export interface CartItem {
@@ -110,12 +107,25 @@ export interface FilterState {
 
 export interface ShippingAddress {
   fullName: string;
-  email: string;
+  // Optional: some markets (see ClientConfig.market === 'egypt') don't
+  // require an email address for delivery.
+  email?: string;
   phone: string;
   country: string;
+  // Generic display fields, always populated regardless of market so
+  // existing order-summary rendering works unchanged either way. For the
+  // Egypt market, `city` holds the governorate display name and
+  // `addressLine` is composed from the granular fields below.
   city: string;
   addressLine: string;
   deliveryNotes?: string;
+  // Egypt-market granular address fields (present when market === 'egypt').
+  governorateId?: string;
+  areaOrCity?: string;
+  streetName?: string;
+  buildingNumber?: string;
+  floorApartment?: string;
+  landmark?: string;
 }
 
 export interface OrderDetails {
@@ -129,7 +139,7 @@ export interface OrderDetails {
   total: number;
   currency: Currency;
   shippingAddress: ShippingAddress;
-  deliveryMethod: 'standard' | 'express' | 'same-day';
+  deliveryMethod: 'standard' | 'express' | 'same-day' | 'pickup';
   paymentMethod: 'card' | 'apple_pay' | 'cod' | 'tabby';
   status: 'confirmed' | 'processing' | 'shipped';
   estimatedDelivery: string;

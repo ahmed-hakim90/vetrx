@@ -1,14 +1,10 @@
 import React from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { CATEGORIES, PRODUCTS } from '../../data/mockData';
-import { Screen } from '../../types/store';
 
 export interface BreadcrumbItem {
   label: string;
-  screen?: Screen;
-  categoryId?: string;
-  productId?: string;
   onClick?: () => void;
   active?: boolean;
 }
@@ -19,97 +15,54 @@ export interface BreadcrumbProps {
   showHomeIcon?: boolean;
 }
 
-export const Breadcrumb: React.FC<BreadcrumbProps> = ({
-  items,
-  className = '',
-  showHomeIcon = true,
-}) => {
-  const {
-    activeScreen,
-    setActiveScreen,
-    filterState,
-    setFilterState,
-    selectedProductId,
-    navigateToCategory,
-    navigateToProduct,
-    language,
-    t,
-  } = useStore();
+// When no explicit `items` are given, the trail is derived from the current
+// route — real URLs, not `activeScreen` state — so it always matches what
+// the address bar and back/forward history show.
+export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '', showHomeIcon = true }) => {
+  const location = useLocation();
+  const params = useParams();
+  const { categories, getProductBySlug, language, t, goHome, goToCheckout, navigateToCategory } = useStore();
 
-  // Find active product and active category for automatic breadcrumb computation
-  const activeProduct = PRODUCTS.find((p) => p.id === selectedProductId);
-  const activeCategory = CATEGORIES.find(
-    (c) =>
-      c.id === filterState.category ||
-      (activeScreen === 'pdp' && activeProduct && c.id === activeProduct.category)
-  );
-
-  // If explicit items provided, use them; otherwise auto-compute from current route & category
   const resolvedItems: BreadcrumbItem[] = React.useMemo(() => {
-    if (items && items.length > 0) {
-      return items;
-    }
+    if (items && items.length > 0) return items;
 
-    const list: BreadcrumbItem[] = [
-      {
-        label: t('navHome'),
-        screen: 'home',
-        onClick: () => setActiveScreen('home'),
-      },
-    ];
+    const path = location.pathname;
+    const list: BreadcrumbItem[] = [{ label: t('navHome'), onClick: goHome }];
 
-    if (activeScreen === 'plp') {
+    if (path === '/products') {
+      list.push({ label: t('allProductsTitle'), active: true });
+    } else if (path.startsWith('/category/')) {
+      const category = categories.find((c) => c.id === params.categorySlug);
       list.push({
-        label: activeCategory ? activeCategory.name[language] : t('categoriesMega'),
+        label: category ? category.name[language] : t('categoriesMega'),
         active: true,
       });
-    } else if (activeScreen === 'pdp') {
-      if (activeCategory) {
-        list.push({
-          label: activeCategory.name[language],
-          screen: 'plp',
-          categoryId: activeCategory.id,
-          onClick: () => {
-            setFilterState((prev) => ({ ...prev, category: activeCategory.id }));
-            setActiveScreen('plp');
-          },
-        });
+    } else if (path.startsWith('/search')) {
+      list.push({ label: t('categoriesMega'), active: true });
+    } else if (path.startsWith('/product/')) {
+      const product = params.productSlug ? getProductBySlug(params.productSlug) : undefined;
+      if (product) {
+        const category = categories.find((c) => c.id === product.category);
+        if (category) {
+          list.push({ label: category.name[language], onClick: () => navigateToCategory(category.id) });
+        }
+        list.push({ label: product.title[language], active: true });
+      } else {
+        list.push({ label: t('productNotFoundTitle'), active: true });
       }
-
-      if (activeProduct) {
-        list.push({
-          label: activeProduct.title[language],
-          active: true,
-        });
-      }
-    } else if (activeScreen === 'checkout') {
-      list.push({
-        label: t('cart'),
-        active: true,
-      });
-    } else if (activeScreen === 'order-confirmation') {
-      list.push({
-        label: t('cart'),
-        screen: 'checkout',
-        onClick: () => setActiveScreen('checkout'),
-      });
-      list.push({
-        label: t('orderSuccessTitle').split('!')[0],
-        active: true,
-      });
+    } else if (path === '/cart') {
+      list.push({ label: t('cartPageTitle'), active: true });
+    } else if (path === '/wishlist') {
+      list.push({ label: t('wishlistPageTitle'), active: true });
+    } else if (path === '/checkout') {
+      list.push({ label: t('cart'), active: true });
+    } else if (path.startsWith('/order/')) {
+      list.push({ label: t('cart'), onClick: goToCheckout });
+      list.push({ label: t('orderSuccessTitle').split('!')[0], active: true });
     }
 
     return list;
-  }, [
-    items,
-    activeScreen,
-    activeCategory,
-    activeProduct,
-    language,
-    t,
-    setActiveScreen,
-    setFilterState,
-  ]);
+  }, [items, location.pathname, params, categories, language, t, goHome, goToCheckout, navigateToCategory, getProductBySlug]);
 
   return (
     <nav
@@ -124,10 +77,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
           return (
             <li key={`bc-${index}`} className="inline-flex items-center gap-1.5">
               {index > 0 && (
-                <ChevronRight
-                  className="w-3.5 h-3.5 text-slate-400 shrink-0 rtl:rotate-180"
-                  aria-hidden="true"
-                />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0 rtl:rotate-180" aria-hidden="true" />
               )}
 
               {item.active || isLast ? (
@@ -140,22 +90,10 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (item.onClick) {
-                      item.onClick();
-                    } else if (item.categoryId) {
-                      navigateToCategory(item.categoryId);
-                    } else if (item.productId) {
-                      navigateToProduct(item.productId);
-                    } else if (item.screen) {
-                      setActiveScreen(item.screen);
-                    }
-                  }}
+                  onClick={item.onClick}
                   className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 active:text-blue-600 transition-colors cursor-pointer min-h-11 sm:min-h-0 py-1 px-1 rounded-md touch-manipulation hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {isFirst && showHomeIcon && (
-                    <Home className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
-                  )}
+                  {isFirst && showHomeIcon && <Home className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />}
                   <span className="truncate max-w-[140px] sm:max-w-[180px]">{item.label}</span>
                 </button>
               )}

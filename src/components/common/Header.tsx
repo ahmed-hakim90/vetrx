@@ -1,25 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   ShoppingCart,
   Heart,
-  Globe,
-  Store,
-  ChevronDown,
   Sparkles,
   ShieldCheck,
   Zap,
-  Smartphone,
-  Laptop,
-  Headphones,
-  Gamepad2,
-  Home as HomeIcon,
   X,
   Menu,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { STORES, PRODUCTS } from '../../data/mockData';
-import { StoreId, Screen, Language, Currency } from '../../types/store';
+import { Currency } from '../../types/store';
+import { getCategoryIcon } from '../../core/catalog/categoryIcons';
 
 export const Header: React.FC = () => {
   const {
@@ -27,56 +20,45 @@ export const Header: React.FC = () => {
     setLanguage,
     currency,
     setCurrency,
-    activeStore,
-    setActiveStore,
-    currentStoreConfig,
-    activeScreen,
-    setActiveScreen,
+    client,
+    products,
     cartCount,
     cartSubtotal,
     wishlist,
-    setIsCartOpen,
-    setIsWishlistOpen,
     t,
     formatPrice,
     navigateToProduct,
     navigateToCategory,
+    goHome,
+    goToProducts,
+    goToCart,
+    goToWishlist,
   } = useStore();
+
+  const location = useLocation();
+  const params = useParams<{ categorySlug?: string }>();
+  const navigate = useNavigate();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [headerQuery, setHeaderQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
 
-  // Track window scroll to collapse top announcement and secondary bars on mobile
   useEffect(() => {
-    let lastScrollY = window.scrollY;
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > 25) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-      lastScrollY = currentScrollY;
-    };
-
+    const handleScroll = () => setIsScrolled(window.scrollY > 25);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Focus mobile input when opened
   useEffect(() => {
     if (mobileSearchOpen && mobileSearchInputRef.current) {
       mobileSearchInputRef.current.focus();
     }
   }, [mobileSearchOpen]);
 
-  // Close search popover when clicked outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -87,17 +69,18 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtered live search suggestions
   const searchResults = headerQuery.trim()
-    ? PRODUCTS.filter((p) => {
-        const query = headerQuery.toLowerCase();
-        return (
-          p.title.en.toLowerCase().includes(query) ||
-          p.title.ar.toLowerCase().includes(query) ||
-          p.brand.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query)
-        );
-      }).slice(0, 5)
+    ? products
+        .filter((p) => {
+          const query = headerQuery.toLowerCase();
+          return (
+            p.title.en.toLowerCase().includes(query) ||
+            p.title.ar.toLowerCase().includes(query) ||
+            p.brand.toLowerCase().includes(query) ||
+            p.category.toLowerCase().includes(query)
+          );
+        })
+        .slice(0, 5)
     : [];
 
   const handleSelectProduct = (productId: string) => {
@@ -108,152 +91,95 @@ export const Header: React.FC = () => {
     navigateToProduct(productId);
   };
 
-  const navCategories = [
-    { id: 'smartphones', name: t('navPhones'), icon: Smartphone },
-    { id: 'laptops', name: t('navLaptops'), icon: Laptop },
-    { id: 'audio', name: t('navAudio'), icon: Headphones },
-    { id: 'gaming', name: t('navGaming'), icon: Gamepad2 },
-    { id: 'smarthome', name: t('navSmartHome'), icon: HomeIcon },
-  ];
+  const handleSearchSubmit = (query: string) => {
+    if (!query.trim()) return;
+    setSearchOpen(false);
+    setMobileSearchOpen(false);
+    setMobileMenuOpen(false);
+    navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+  };
+
+  const navCategories = client.navigationCategories.map((cat) => ({
+    id: cat.id,
+    name: cat.label[language],
+    icon: getCategoryIcon(cat.icon),
+  }));
+
+  const isHomeActive = location.pathname === '/';
+  const isCategoryActive = (id: string) => location.pathname === `/category/${id}` || (location.pathname === '/products' && params.categorySlug === id);
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all duration-300">
-      {/* 1. Collapsing Top Announcement Bar (collapses smoothly on scroll on all viewports) */}
-      <div
-        className={`bg-slate-900 text-slate-200 text-xs px-4 border-slate-800 transition-all duration-300 ease-in-out ${
-          isScrolled
-            ? 'max-h-0 py-0 opacity-0 overflow-hidden border-b-0'
-            : 'max-h-16 py-1.5 sm:py-2 border-b opacity-100'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
-          <div className="flex items-center gap-2 font-medium tracking-tight text-[11px] sm:text-xs">
-            <span className="inline-flex items-center justify-center p-1 rounded-full bg-amber-400/20 text-amber-300 shrink-0">
-              <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            </span>
-            <span className="truncate">{t('topAnnouncement')}</span>
-          </div>
-          <div className="flex items-center gap-4 text-slate-300 text-[11px] sm:text-xs">
-            <span className="hidden md:inline-flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              {t('authorizedGCCWarranty')}
-            </span>
-            <span className="hidden lg:inline text-slate-500">|</span>
-            <span className="font-semibold text-slate-200">{t('supportHotline')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Multi-Store & Brand Switcher Bar (collapses on mobile when scrolled) */}
-      <div
-        className={`bg-slate-100/90 border-b border-slate-200 px-4 text-xs transition-all duration-300 ease-in-out ${
-          isScrolled ? 'hidden md:block py-1' : 'py-1.5'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
-            <Store className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-            <span className="font-semibold text-slate-600 hidden sm:inline whitespace-nowrap">
-              {t('selectStore')}:
-            </span>
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              {STORES.map((s) => {
-                const isActive = s.id === activeStore;
-                return (
-                  <button
-                    key={s.id}
-                    id={`store-switcher-${s.id}`}
-                    onClick={() => setActiveStore(s.id)}
-                    className={`min-h-[36px] sm:min-h-[30px] px-2.5 sm:px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 touch-manipulation ${
-                      isActive
-                        ? 'bg-white text-slate-900 shadow-xs border border-slate-300'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                    }`}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: s.primaryColor }}
-                    />
-                    <span className="text-xs">{s.name[language]}</span>
-                    {isActive && (
-                      <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full hidden md:inline">
-                        {s.badge[language]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      {client.home.announcementBar && (
+        <div
+          className={`bg-slate-900 text-slate-200 text-xs px-4 border-slate-800 transition-all duration-300 ease-in-out ${
+            isScrolled ? 'max-h-0 py-0 opacity-0 overflow-hidden border-b-0' : 'max-h-16 py-1.5 sm:py-2 border-b opacity-100'
+          }`}
+        >
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-2 font-medium tracking-tight text-[11px] sm:text-xs min-w-0 w-full sm:w-auto">
+              <span className="inline-flex items-center justify-center p-1 rounded-full bg-amber-400/20 text-amber-300 shrink-0">
+                <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              </span>
+              <span className="truncate min-w-0">{client.home.announcementBar[language]}</span>
             </div>
-          </div>
-
-          {/* Quick Screen Switcher for review ease */}
-          <div className="hidden lg:flex items-center gap-1 bg-white border border-slate-200 rounded-md p-0.5 shadow-2xs">
-            {(['home', 'plp', 'pdp', 'checkout'] as Screen[]).map((scr) => (
-              <button
-                key={scr}
-                id={`screen-nav-${scr}`}
-                onClick={() => setActiveScreen(scr)}
-                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
-                  activeScreen === scr
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {scr === 'home' && '1. Homepage'}
-                {scr === 'plp' && '2. PLP (Catalog)'}
-                {scr === 'pdp' && '3. PDP (Details)'}
-                {scr === 'checkout' && '4. Cart & Checkout'}
-              </button>
-            ))}
+            {(client.policies.warrantyPolicy || client.contact.supportPhoneDisplay) && (
+              <div className="flex items-center gap-4 text-slate-300 text-[11px] sm:text-xs min-w-0 shrink-0">
+                {client.policies.warrantyPolicy && (
+                  <span className="hidden md:inline-flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    {client.policies.warrantyPolicy[language]}
+                  </span>
+                )}
+                {client.policies.warrantyPolicy && client.contact.supportPhoneDisplay && (
+                  <span className="hidden lg:inline text-slate-500">|</span>
+                )}
+                {client.contact.supportPhoneDisplay && (
+                  <span className="font-semibold text-slate-200" dir="ltr">
+                    {client.contact.supportPhoneDisplay}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 3. Main Brand & Search Bar */}
       <div
         className={`max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-200 ${
           isScrolled ? 'py-2' : 'py-2.5 sm:py-3'
         }`}
       >
-        {/* Brand Logo & Store Name */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center cursor-pointer touch-manipulation transition-transform active:scale-95"
+            className="md:hidden min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center cursor-pointer touch-manipulation transition-transform active:scale-95 shrink-0"
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           <button
-            onClick={() => setActiveScreen('home')}
-            className="flex items-center gap-2 sm:gap-2.5 text-start cursor-pointer group min-h-[44px] touch-manipulation"
+            onClick={goHome}
+            className="flex items-center gap-2 sm:gap-2.5 text-start cursor-pointer group min-h-[44px] touch-manipulation min-w-0"
           >
-            <div
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-md transition-transform group-hover:scale-105 shrink-0"
-              style={{
-                backgroundColor: currentStoreConfig.primaryColor,
-              }}
-            >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary-foreground bg-primary font-black text-lg sm:text-xl shadow-md transition-transform group-hover:scale-105 shrink-0">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 fill-white text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <span className="text-base sm:text-xl font-black tracking-tight text-slate-900 leading-tight">
-                  {currentStoreConfig.name[language]}
-                </span>
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                  GCC
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                <span className="text-base sm:text-xl font-black tracking-tight text-slate-900 leading-tight truncate">
+                  {client.displayName[language]}
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium line-clamp-1 max-w-[140px] sm:max-w-[220px]">
-                {currentStoreConfig.tagline[language]}
+                {client.tagline[language]}
               </p>
             </div>
           </button>
         </div>
 
-        {/* Live Search Input with Suggestions (Desktop) */}
         <div ref={searchRef} className="relative flex-1 max-w-xl hidden md:block">
           <div className="relative">
             <input
@@ -265,6 +191,9 @@ export const Header: React.FC = () => {
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit(headerQuery);
+              }}
               placeholder={t('searchPlaceholder')}
               className="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-slate-900 text-sm pl-10 pr-10 rtl:pr-10 rtl:pl-10 py-2.5 rounded-xl border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
@@ -279,14 +208,11 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Search Dropdown Popover */}
           {searchOpen && (
             <div className="absolute top-full mt-2 inset-x-0 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               {searchResults.length > 0 ? (
                 <div>
-                  <div className="text-xs font-semibold text-slate-400 px-2 mb-2 uppercase tracking-wider">
-                    {t('results')}
-                  </div>
+                  <div className="text-xs font-semibold text-slate-400 px-2 mb-2 uppercase tracking-wider">{t('results')}</div>
                   <div className="space-y-1">
                     {searchResults.map((prod) => (
                       <button
@@ -294,57 +220,24 @@ export const Header: React.FC = () => {
                         onClick={() => handleSelectProduct(prod.id)}
                         className="w-full min-h-[44px] flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors text-start cursor-pointer touch-manipulation"
                       >
-                        <img
-                          src={prod.images[0]}
-                          alt={prod.title[language]}
-                          className="w-10 h-10 rounded-md object-cover border border-slate-200 shrink-0"
-                        />
+                        <img src={prod.images[0]} alt={prod.title[language]} className="w-10 h-10 rounded-md object-cover border border-slate-200 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {prod.title[language]}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-900 truncate">{prod.title[language]}</p>
                           <p className="text-xs text-slate-500">{prod.brand}</p>
                         </div>
-                        <div className="text-sm font-bold text-slate-900">
-                          {formatPrice(prod.price)}
-                        </div>
+                        <div className="text-sm font-bold text-slate-900">{formatPrice(prod.price)}</div>
                       </button>
                     ))}
                   </div>
                 </div>
               ) : headerQuery ? (
-                <div className="p-4 text-center text-sm text-slate-500">
-                  {t('noProductsFound')}
-                </div>
-              ) : (
-                <div>
-                  <div className="text-xs font-semibold text-slate-400 px-2 mb-2 uppercase tracking-wider">
-                    {t('searchSuggestions')}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 px-2">
-                    {['iPhone 16 Pro', 'RTX 4080', 'Sony WH-1000XM5', 'Roborock S8', 'MacBook M4'].map(
-                      (sug) => (
-                        <button
-                          key={sug}
-                          onClick={() => {
-                            setHeaderQuery(sug);
-                          }}
-                          className="text-xs min-h-[32px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full cursor-pointer transition-colors active:scale-95"
-                        >
-                          {sug}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
+                <div className="p-4 text-center text-sm text-slate-500">{t('noProductsFound')}</div>
+              ) : null}
             </div>
           )}
         </div>
 
-        {/* Right Controls: Mobile Search Trigger, Language, Currency, Wishlist, Cart */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
-          {/* Mobile Search Button (Quick Collapsible Search toggle) */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button
             id="mobile-search-toggle-btn"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
@@ -356,15 +249,13 @@ export const Header: React.FC = () => {
             <Search className="w-5 h-5" />
           </button>
 
-          {/* Language Switcher Pill */}
           <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 text-xs font-bold">
             <button
               id="lang-btn-en"
               onClick={() => setLanguage('en')}
+              aria-pressed={language === 'en'}
               className={`min-h-[36px] sm:min-h-[30px] px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer touch-manipulation flex items-center justify-center ${
-                language === 'en'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                language === 'en' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               EN
@@ -372,51 +263,53 @@ export const Header: React.FC = () => {
             <button
               id="lang-btn-ar"
               onClick={() => setLanguage('ar')}
+              aria-pressed={language === 'ar'}
               className={`min-h-[36px] sm:min-h-[30px] px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer touch-manipulation flex items-center justify-center font-['Cairo'] ${
-                language === 'ar'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                language === 'ar' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               العربية
             </button>
           </div>
 
-          {/* Currency Selector */}
-          <div className="relative hidden xs:block">
-            <select
-              id="currency-selector"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value as Currency)}
-              aria-label={t('currency')}
-              className="min-h-[40px] sm:min-h-[36px] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+          {client.currencies.length > 1 && (
+            <div className="relative hidden sm:block">
+              <select
+                id="currency-selector"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as Currency)}
+                aria-label={t('currency')}
+                className="min-h-[40px] sm:min-h-[36px] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer outline-none focus:ring-2 focus:ring-primary touch-manipulation"
+              >
+                {client.currencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.symbol[language]})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {client.featureFlags.wishlistEnabled && (
+            <button
+              id="header-wishlist-btn"
+              onClick={goToWishlist}
+              className="hidden sm:flex min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-all cursor-pointer items-center justify-center relative touch-manipulation active:scale-95"
+              title={t('wishlist')}
+              aria-label={t('wishlist')}
             >
-              <option value="AED">AED (د.إ)</option>
-              <option value="SAR">SAR (ر.س)</option>
-              <option value="USD">USD ($)</option>
-            </select>
-          </div>
+              <Heart className="w-5 h-5" />
+              {wishlist.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 rtl:right-auto rtl:left-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs pointer-events-none">
+                  {wishlist.length}
+                </span>
+              )}
+            </button>
+          )}
 
-          {/* Wishlist Button (min 44px touch target) */}
-          <button
-            id="header-wishlist-btn"
-            onClick={() => setIsWishlistOpen(true)}
-            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-all cursor-pointer flex items-center justify-center relative touch-manipulation active:scale-95"
-            title={t('wishlist')}
-            aria-label={t('wishlist')}
-          >
-            <Heart className="w-5 h-5" />
-            {wishlist.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 rtl:right-auto rtl:left-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs pointer-events-none">
-                {wishlist.length}
-              </span>
-            )}
-          </button>
-
-          {/* Cart Trigger Button (min 44px touch target) */}
           <button
             id="header-cart-btn"
-            onClick={() => setIsCartOpen(true)}
+            onClick={goToCart}
             className="min-h-[44px] min-w-[44px] sm:min-w-0 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 active:bg-black text-white px-3 sm:px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer touch-manipulation active:scale-95"
             aria-label={t('cart')}
           >
@@ -429,16 +322,13 @@ export const Header: React.FC = () => {
               )}
             </div>
             <div className="hidden sm:block text-start">
-              <div className="text-[10px] text-slate-400 uppercase font-semibold leading-none">
-                {t('cart')}
-              </div>
+              <div className="text-[10px] text-slate-400 uppercase font-semibold leading-none">{t('cart')}</div>
               <div className="text-xs font-bold leading-tight">{formatPrice(cartSubtotal)}</div>
             </div>
           </button>
         </div>
       </div>
 
-      {/* Collapsible Mobile Quick-Search Bar */}
       {mobileSearchOpen && (
         <div className="md:hidden px-3 pb-3 pt-1 border-t border-slate-100 bg-white animate-in slide-in-from-top-2 duration-200">
           <div className="relative">
@@ -447,6 +337,9 @@ export const Header: React.FC = () => {
               type="text"
               value={headerQuery}
               onChange={(e) => setHeaderQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit(headerQuery);
+              }}
               placeholder={t('searchPlaceholder')}
               className="w-full bg-slate-100 text-slate-900 text-sm pl-10 pr-10 rtl:pr-10 rtl:pl-10 py-2.5 rounded-xl border border-slate-200 outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20"
             />
@@ -461,7 +354,6 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Quick results preview on mobile search */}
           {headerQuery.trim() && searchResults.length > 0 && (
             <div className="mt-2 bg-slate-50 rounded-xl p-2 border border-slate-200 space-y-1 max-h-60 overflow-y-auto">
               {searchResults.map((prod) => (
@@ -470,15 +362,9 @@ export const Header: React.FC = () => {
                   onClick={() => handleSelectProduct(prod.id)}
                   className="w-full min-h-[44px] flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer touch-manipulation"
                 >
-                  <img
-                    src={prod.images[0]}
-                    alt={prod.title[language]}
-                    className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
-                  />
+                  <img src={prod.images[0]} alt={prod.title[language]} className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">
-                      {prod.title[language]}
-                    </p>
+                    <p className="text-xs font-bold text-slate-900 truncate">{prod.title[language]}</p>
                     <p className="text-[11px] text-blue-600 font-semibold">{formatPrice(prod.price)}</p>
                   </div>
                 </button>
@@ -488,12 +374,11 @@ export const Header: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Category Navigation Bar (Desktop) */}
       <div className="border-t border-slate-100 bg-white hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 py-1">
             <button
-              onClick={() => setActiveScreen('plp')}
+              onClick={goToProducts}
               className="min-h-[38px] flex items-center gap-1.5 px-3 py-2 rounded-md font-bold text-slate-800 hover:bg-slate-100 cursor-pointer"
             >
               <Menu className="w-4 h-4 text-blue-600" />
@@ -501,11 +386,9 @@ export const Header: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveScreen('home')}
+              onClick={goHome}
               className={`min-h-[38px] px-3 py-2 rounded-md font-semibold transition-colors cursor-pointer ${
-                activeScreen === 'home'
-                  ? 'text-blue-600 bg-blue-50/70'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                isHomeActive ? 'text-blue-600 bg-blue-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               {t('navHome')}
@@ -517,7 +400,9 @@ export const Header: React.FC = () => {
                 <button
                   key={cat.id}
                   onClick={() => navigateToCategory(cat.id)}
-                  className="min-h-[38px] flex items-center gap-1.5 px-3 py-2 rounded-md font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className={`min-h-[38px] flex items-center gap-1.5 px-3 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    isCategoryActive(cat.id) ? 'text-blue-600 bg-blue-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
                 >
                   <IconComponent className="w-3.5 h-3.5 text-slate-400" />
                   <span>{cat.name}</span>
@@ -528,9 +413,7 @@ export const Header: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                navigateToCategory('all');
-              }}
+              onClick={goToProducts}
               className="min-h-[36px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-rose-500" />
@@ -540,16 +423,17 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-4 shadow-xl animate-in slide-in-from-top-3 duration-200 max-h-[80vh] overflow-y-auto">
-          {/* Mobile Search inside menu */}
           <div className="space-y-2">
             <div className="relative">
               <input
                 type="text"
                 value={headerQuery}
                 onChange={(e) => setHeaderQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearchSubmit(headerQuery);
+                }}
                 placeholder={t('searchPlaceholder')}
                 className="w-full bg-slate-100 text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:bg-white focus:border-blue-600"
               />
@@ -563,27 +447,17 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Mobile search suggestions */}
             {headerQuery.trim() && searchResults.length > 0 && (
               <div className="bg-slate-50 rounded-xl p-2 border border-slate-200 space-y-1 max-h-56 overflow-y-auto">
                 {searchResults.map((prod) => (
                   <button
                     key={prod.id}
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleSelectProduct(prod.id);
-                    }}
+                    onClick={() => handleSelectProduct(prod.id)}
                     className="w-full min-h-[44px] flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer touch-manipulation"
                   >
-                    <img
-                      src={prod.images[0]}
-                      alt={prod.title[language]}
-                      className="w-8 h-8 rounded object-contain bg-white border border-slate-200 shrink-0"
-                    />
+                    <img src={prod.images[0]} alt={prod.title[language]} className="w-8 h-8 rounded object-contain bg-white border border-slate-200 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {prod.title[language]}
-                      </p>
+                      <p className="text-xs font-bold text-slate-900 truncate">{prod.title[language]}</p>
                       <p className="text-[10px] text-blue-600 font-semibold">{formatPrice(prod.price)}</p>
                     </div>
                   </button>
@@ -592,64 +466,8 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Screen Navigation for Evaluators (44px touch target buttons) */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Storefront Screens
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-              <button
-                onClick={() => {
-                  setActiveScreen('home');
-                  setMobileMenuOpen(false);
-                }}
-                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
-                  activeScreen === 'home' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                1. Homepage
-              </button>
-              <button
-                onClick={() => {
-                  setActiveScreen('plp');
-                  setMobileMenuOpen(false);
-                }}
-                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
-                  activeScreen === 'plp' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                2. PLP (Catalog)
-              </button>
-              <button
-                onClick={() => {
-                  setActiveScreen('pdp');
-                  setMobileMenuOpen(false);
-                }}
-                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
-                  activeScreen === 'pdp' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                3. PDP (Details)
-              </button>
-              <button
-                onClick={() => {
-                  setActiveScreen('checkout');
-                  setMobileMenuOpen(false);
-                }}
-                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
-                  activeScreen === 'checkout' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                4. Cart & Checkout
-              </button>
-            </div>
-          </div>
-
-          {/* Categories (min 44px touch targets) */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              {t('shopByCategory')}
-            </span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{t('shopByCategory')}</span>
             <div className="grid grid-cols-2 gap-2 text-xs">
               {navCategories.map((cat) => {
                 const IconComp = cat.icon;
@@ -669,35 +487,8 @@ export const Header: React.FC = () => {
               })}
             </div>
           </div>
-
-          {/* Multi-Store Switcher */}
-          <div className="border-t border-slate-100 pt-3 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              {t('selectStore')}
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {STORES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    setActiveStore(s.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`min-h-[44px] text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all touch-manipulation ${
-                    activeStore === s.id
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.primaryColor }} />
-                  <span>{s.name[language]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       )}
     </header>
   );
 };
-

@@ -1,0 +1,186 @@
+import { ClientConfig } from './schema';
+
+export const voltixConfig: ClientConfig = {
+  id: 'voltix',
+  slug: 'voltix',
+  legalName: 'Voltix Electronics LLC',
+  displayName: { en: 'Voltix Electronics', ar: 'إلكترونيات فولتيكس' },
+  tagline: {
+    en: 'Flagship consumer electronics & mobile devices',
+    ar: 'الإلكترونيات الاستهلاكية الرائدة والأجهزة الذكية',
+  },
+  logo: '/assets/clients/voltix/logo.svg',
+  favicon: '/assets/clients/voltix/logo.svg',
+  theme: {
+    colorPrimary: '#2563EB',
+    colorPrimaryHover: '#1D4ED8',
+    colorPrimaryForeground: '#FFFFFF',
+    colorSecondary: '#0F172A',
+    colorAccent: '#F59E0B',
+    colorBackground: '#F1F5F9',
+    colorSurface: '#FFFFFF',
+    colorText: '#0F172A',
+    colorMuted: '#64748B',
+    colorBorder: '#E2E8F0',
+    radiusCard: '1rem',
+    radiusButton: '0.75rem',
+    fontSans: "'Plus Jakarta Sans', system-ui, sans-serif",
+    fontHeading: "'Plus Jakarta Sans', system-ui, sans-serif",
+  },
+  contact: {
+    supportPhone: '+97148008658',
+    supportPhoneDisplay: '800-VOLTIX (865849)',
+    supportEmail: 'support@voltix-electronics.example',
+    supportEmailStatus: 'confirmed',
+    additionalPhones: [],
+  },
+  addresses: [
+    {
+      label: { en: 'Dubai Flagship Store', ar: 'فرع دبي الرئيسي' },
+      line: 'Downtown Boulevard, Building 4',
+      city: 'Dubai',
+      country: 'United Arab Emirates',
+      phones: [],
+      status: 'confirmed',
+    },
+  ],
+  socialLinks: {
+    twitter: 'https://twitter.com/VoltixStore',
+    instagram: 'https://instagram.com/VoltixStore',
+    facebook: 'https://facebook.com/VoltixStore',
+  },
+  supportedLocales: ['en', 'ar'],
+  defaultLocale: 'en',
+  currencies: [
+    { code: 'AED', symbol: { en: 'AED', ar: 'د.إ' }, rate: 1.0 },
+    { code: 'SAR', symbol: { en: 'SAR', ar: 'ر.س' }, rate: 1.02 },
+    { code: 'USD', symbol: { en: '$', ar: '$' }, rate: 0.272 },
+  ],
+  defaultCurrency: 'AED',
+  countriesServed: ['United Arab Emirates', 'Saudi Arabia', 'Kuwait', 'Qatar', 'Bahrain', 'Oman'],
+  market: 'gulf',
+  tax: {
+    vatPercent: 5,
+    vatLabel: { en: 'Estimated VAT (5%)', ar: 'ضريبة القيمة المضافة المقدرة (5%)' },
+    vatApplied: true,
+    pricesIncludeTax: false,
+  },
+  shipping: {
+    freeShippingThreshold: 200,
+    standardFee: 20,
+    expressFee: 15,
+    sameDayFee: 25,
+    etaConfirmed: true,
+    pickupEnabled: false,
+    zones: [
+      {
+        id: 'gcc',
+        label: { en: 'GCC Express Zone', ar: 'منطقة التوصيل السريع الخليجية' },
+        cities: ['Dubai', 'Abu Dhabi', 'Sharjah', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City'],
+      },
+    ],
+  },
+  paymentMethods: [
+    { id: 'card', enabled: true, confirmed: true },
+    { id: 'apple_pay', enabled: true, confirmed: true },
+    {
+      id: 'tabby',
+      enabled: true,
+      confirmed: true,
+      label: { en: 'Tabby — Split in 4 Payments', ar: 'تابي - قسّم فاتورتك على 4 دفعات' },
+      description: { en: 'No interest, no hidden fees. First payment today.', ar: 'بدون فوائد أو رسوم خفية. الدفعة الأولى اليوم.' },
+    },
+    { id: 'cod', enabled: true, confirmed: true },
+  ],
+  content: { faq: [] },
+  policies: {
+    returnPolicy: {
+      en: '14-Day Free Returns policy with easy pickup',
+      ar: 'سياسة إرجاع مجانية سهلة خلال 14 يوماً مع استلام من الباب',
+    },
+    returnWindowDays: 14,
+    warrantyPolicy: {
+      en: '2-Year Official GCC Manufacturer Warranty',
+      ar: 'ضمان رسمي سنتين ساري في جميع دول مجلس التعاون الخليجي',
+    },
+  },
+  seo: {
+    siteUrl: 'https://voltix-electronics.example',
+    titleSuffix: { en: 'Voltix Electronics', ar: 'إلكترونيات فولتيكس' },
+    defaultDescription: {
+      en: 'Shop the latest flagship smartphones, laptops, audio gear, gaming rigs, and smart home gadgets at Voltix Electronics.',
+      ar: 'تسوق أحدث الهواتف الذكية وأجهزة الكمبيوتر المحمولة والسماعات ومنصات الألعاب من إلكترونيات فولتيكس.',
+    },
+    ogImage: '/assets/clients/voltix/photo-placeholder.svg',
+    organizationLogo: '/assets/clients/voltix/logo.svg',
+  },
+  home: {
+    announcementBar: {
+      en: 'Ramadan & Spring Tech Fest: Up to 40% OFF + Free Express Shipping over 200 AED',
+      ar: 'مهرجان تكنولوجيا الربيع: خصومات تصل إلى 40% + شحن سريع مجاني للطلبات فوق 200 درهم',
+    },
+    heroBadge: { en: 'FLAGSHIP LAUNCH 2025', ar: 'إطلاق الطراز الرائد 2025' },
+    heroTitle: {
+      en: 'Titanium Performance. Next-Gen Intelligence.',
+      ar: 'أداء التيتانيوم. ذكاء الجيل القادم.',
+    },
+    heroSubtitle: {
+      en: 'Experience the cutting-edge fusion of AI processing, ProMotion OLED displays, and all-day endurance.',
+      ar: 'اختبر الاندماج الثوري بين معالجة الذكاء الاصطناعي الفائقة، وشاشات أوليد المذهلة، وبطارية تدوم طوال اليوم.',
+    },
+    heroImage: '/assets/clients/voltix/photo-placeholder.svg',
+    heroImageAlt: { en: 'Voltix flagship smartphone', ar: 'هاتف فولتيكس الرائد' },
+    heroPrimaryCtaCategorySlug: 'all',
+    heroSecondaryCtaProductSlug: 'prod-iphone-16-pro-max',
+    heroStats: [
+      { value: { en: 'Up to 36h', ar: 'حتى 36 ساعة' }, label: { en: 'Battery Life', ar: 'عمر البطارية' } },
+      { value: { en: '3nm Pro', ar: '3 نانومتر برو' }, label: { en: 'Neural Engine', ar: 'المحرك العصبي' } },
+      { value: { en: '120Hz', ar: '120 هرتز' }, label: { en: 'OLED Refresh', ar: 'معدل تحديث أوليد' } },
+    ],
+    bentoBanners: [
+      {
+        badge: { en: 'Acoustic Precision', ar: 'دقة صوتية فائقة' },
+        title: { en: 'Studio Noise Cancelling Headphones', ar: 'سماعات رأس احترافية مع عزل نشط للضوضاء' },
+        description: {
+          en: 'Immerse yourself in 360 Spatial Audio with active ambient isolation.',
+          ar: 'استمتع بصوت محيطي مكاني بزاوية 360 درجة مع عزل فائق للضجيج المحيط.',
+        },
+        ctaLabel: { en: 'Discover Sound', ar: 'اكتشف نقاء الصوت' },
+        categorySlug: 'audio',
+        image: '/assets/clients/voltix/photo-placeholder.svg',
+      },
+      {
+        badge: { en: 'Next-Gen Gaming', ar: 'ألعاب الجيل الجديد' },
+        title: { en: 'Ultra Gaming Laptops & OLED Monitors', ar: 'أقوى أجهزة اللابتوب وشاشات الألعاب أوليد' },
+        description: {
+          en: 'Powered by RTX architecture and blazing 240Hz refresh rates.',
+          ar: 'مدعومة ببطاقات رسوميات RTX ومعدلات تحديث فائقة السرعة تصل إلى 240 هرتز.',
+        },
+        ctaLabel: { en: 'Upgrade Rig', ar: 'طوّر منصتك الآن' },
+        categorySlug: 'gaming',
+        image: '/assets/clients/voltix/photo-placeholder.svg',
+      },
+    ],
+  },
+  navigationCategories: [
+    { id: 'smartphones', label: { en: 'Smartphones & Tablets', ar: 'الهواتف الذكية والأجهزة اللوحية' }, icon: 'Smartphone' },
+    { id: 'laptops', label: { en: 'Laptops & Computing', ar: 'أجهزة الكمبيوتر المحمولة' }, icon: 'Laptop' },
+    { id: 'audio', label: { en: 'Audio & Hi-Fi', ar: 'الصوتيات وسماعات الرأس' }, icon: 'Headphones' },
+    { id: 'wearables', label: { en: 'Wearables & Smartwatches', ar: 'الساعات والأجهزة القابلة للارتداء' }, icon: 'Watch' },
+  ],
+  featureFlags: {
+    wishlistEnabled: true,
+    quickViewEnabled: true,
+    couponsEnabled: true,
+    reviewsEnabled: true,
+    expressDeliveryEnabled: true,
+  },
+  commerce: {
+    provider: 'mock',
+  },
+  demoCouponCodes: [
+    { code: 'VOLTIX10', discountPercent: 10 },
+    { code: 'WELCOME50', discountPercent: 15 },
+  ],
+  orderNumberPrefix: 'VTX',
+};

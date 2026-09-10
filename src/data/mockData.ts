@@ -1,43 +1,8 @@
-import { Category, Product, StoreConfig, StoreId, Currency } from '../types/store';
+import { Category, Product } from '../types/store';
 
-export const STORES: StoreConfig[] = [
-  {
-    id: 'voltix',
-    name: { en: 'Voltix Electronics', ar: 'إلكترونيات فولتيكس' },
-    tagline: { en: 'Flagship consumer electronics & mobile devices', ar: 'الإلكترونيات الاستهلاكية الرائدة والأجهزة الذكية' },
-    badge: { en: 'Flagship Store', ar: 'المتجر الرئيسي' },
-    primaryColor: '#2563EB', // Electric Blue
-    accentColor: '#1D4ED8',
-    chipClass: 'bg-blue-600 text-white',
-    bannerGradient: 'from-blue-950 via-slate-900 to-slate-950',
-  },
-  {
-    id: 'apex',
-    name: { en: 'Apex Gaming Gear', ar: 'أبيكس لمعدات الألعاب' },
-    tagline: { en: 'Elite esports peripherals, rigs & displays', ar: 'عتاد ومعدات الرياضات الإلكترونية والشاشات فائقة السرعة' },
-    badge: { en: 'Pro Gaming Division', ar: 'قسم الألعاب الاحترافي' },
-    primaryColor: '#06B6D4', // Neon Cyan / Crimson
-    accentColor: '#EF4444',
-    chipClass: 'bg-cyan-600 text-white',
-    bannerGradient: 'from-cyan-950 via-slate-950 to-zinc-950',
-  },
-  {
-    id: 'lumina',
-    name: { en: 'Lumina Smart Living', ar: 'لومينا للحياة الذكية' },
-    tagline: { en: 'Modern connected home automation & acoustics', ar: 'أحدث حلول أتمتة المنازل الذكية والأنظمة الصوتية' },
-    badge: { en: 'Smart Home Division', ar: 'قسم المنازل الذكية' },
-    primaryColor: '#059669', // Emerald Green
-    accentColor: '#10B981',
-    chipClass: 'bg-emerald-600 text-white',
-    bannerGradient: 'from-emerald-950 via-slate-950 to-slate-900',
-  },
-];
-
-export const CURRENCY_CONFIG: Record<Currency, { rate: number; symbol: { en: string; ar: string } }> = {
-  AED: { rate: 1.0, symbol: { en: 'AED', ar: 'د.إ' } },
-  SAR: { rate: 1.02, symbol: { en: 'SAR', ar: 'ر.س' } },
-  USD: { rate: 0.272, symbol: { en: '$', ar: '$' } },
-};
+// Currency symbols and conversion rates now live in each client's own config
+// (ClientConfig.currencies) so that one client's build never carries another
+// market's currency codes.
 
 export const CATEGORIES: Category[] = [
   {
@@ -683,7 +648,11 @@ export const PRODUCTS: Product[] = [
     warranty: { en: '2-Year Apple GCC Warranty', ar: 'ضمان رسمي سنتين من أبل الخليج' },
     isFeatured: true,
   },
+
 ];
+
+// Shams Store's demo catalog lives entirely in src/data/demo/shams/ — a
+// fully separate dataset, not appended here (see core/commerce/demoCatalog.ts).
 
 export const BRAND_LOGOS = [
   { name: 'Apple', logo: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=120&q=80' },
