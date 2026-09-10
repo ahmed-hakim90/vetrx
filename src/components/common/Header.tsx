@@ -13,6 +13,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { Currency } from '../../types/store';
 import { getCategoryIcon } from '../../core/catalog/categoryIcons';
+import { MenuDrawer } from '../navigation/MenuDrawer';
 
 export const Header: React.FC = () => {
   const {
@@ -22,6 +23,7 @@ export const Header: React.FC = () => {
     setCurrency,
     client,
     products,
+    categories,
     cartCount,
     cartSubtotal,
     wishlist,
@@ -423,72 +425,11 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-4 shadow-xl animate-in slide-in-from-top-3 duration-200 max-h-[80vh] overflow-y-auto">
-          <div className="space-y-2">
-            <div className="relative">
-              <input
-                type="text"
-                value={headerQuery}
-                onChange={(e) => setHeaderQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSearchSubmit(headerQuery);
-                }}
-                placeholder={t('searchPlaceholder')}
-                className="w-full bg-slate-100 text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:bg-white focus:border-blue-600"
-              />
-              {headerQuery && (
-                <button
-                  onClick={() => setHeaderQuery('')}
-                  className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute right-1 rtl:right-auto rtl:left-1 top-1/2 -translate-y-1/2 text-slate-400"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {headerQuery.trim() && searchResults.length > 0 && (
-              <div className="bg-slate-50 rounded-xl p-2 border border-slate-200 space-y-1 max-h-56 overflow-y-auto">
-                {searchResults.map((prod) => (
-                  <button
-                    key={prod.id}
-                    onClick={() => handleSelectProduct(prod.id)}
-                    className="w-full min-h-[44px] flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer touch-manipulation"
-                  >
-                    <img src={prod.images[0]} alt={prod.title[language]} className="w-8 h-8 rounded object-contain bg-white border border-slate-200 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">{prod.title[language]}</p>
-                      <p className="text-[10px] text-blue-600 font-semibold">{formatPrice(prod.price)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{t('shopByCategory')}</span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {navCategories.map((cat) => {
-                const IconComp = cat.icon;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      navigateToCategory(cat.id);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="min-h-[44px] p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 font-medium text-slate-700 text-start flex items-center gap-2 touch-manipulation"
-                  >
-                    <IconComp className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span className="truncate">{cat.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <MenuDrawer
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        categories={categories}
+      />
     </header>
   );
 };
