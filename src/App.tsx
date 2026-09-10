@@ -10,17 +10,22 @@ import { Footer } from './components/common/Footer';
 import { CartDrawer } from './components/common/CartDrawer';
 import { WishlistDrawer } from './components/common/WishlistDrawer';
 import { QuickViewModal } from './components/common/QuickViewModal';
+import { SEOManager } from './components/common/SEOManager';
 import { MobileNav } from './components/common/MobileNav';
 import { HomeScreen } from './components/home/HomeScreen';
 import { ProductListingScreen } from './components/plp/ProductListingScreen';
 import { ProductDetailScreen } from './components/pdp/ProductDetailScreen';
 import { CheckoutScreen } from './components/checkout/CheckoutScreen';
+import { OrderConfirmationScreen } from './components/checkout/OrderConfirmationScreen';
 
 const MainContent: React.FC = () => {
   const { activeScreen } = useStore();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 selection:bg-blue-600 selection:text-white">
+      {/* Dynamic SEO Head & Indexing Manager */}
+      <SEOManager />
+
       {/* Global Header */}
       <Header />
 
@@ -30,6 +35,7 @@ const MainContent: React.FC = () => {
         {activeScreen === 'plp' && <ProductListingScreen />}
         {activeScreen === 'pdp' && <ProductDetailScreen />}
         {activeScreen === 'checkout' && <CheckoutScreen />}
+        {activeScreen === 'order-confirmation' && <OrderConfirmationScreen />}
       </main>
 
       {/* Global Cart Slide-Over Drawer */}

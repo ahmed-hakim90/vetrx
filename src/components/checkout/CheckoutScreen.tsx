@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { ShippingAddress, OrderDetails } from '../../types/store';
+import { Breadcrumb } from '../common/Breadcrumb';
+import { OrderConfirmationScreen } from './OrderConfirmationScreen';
 
 export const CheckoutScreen: React.FC = () => {
   const {
@@ -109,11 +111,23 @@ export const CheckoutScreen: React.FC = () => {
         deliveryMethod,
         paymentMethod,
         status: 'confirmed',
-        estimatedDelivery: 'Tomorrow, by 2:00 PM',
+        estimatedDelivery:
+          deliveryMethod === 'same-day'
+            ? language === 'ar'
+              ? 'اليوم، بحلول الساعة 8:00 مساءً'
+              : 'Today, by 8:00 PM'
+            : deliveryMethod === 'express'
+            ? language === 'ar'
+              ? 'غداً، بحلول الساعة 2:00 ظهراً'
+              : 'Tomorrow, by 2:00 PM'
+            : language === 'ar'
+            ? 'خلال 2-3 أيام عمل'
+            : 'Within 2-3 Business Days',
       };
       setConfirmedOrder(newOrder);
       clearCart();
       setIsSubmitting(false);
+      setActiveScreen('order-confirmation');
       if (typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -122,113 +136,20 @@ export const CheckoutScreen: React.FC = () => {
 
   // If order has already been confirmed, display Order Confirmation Screen
   if (confirmedOrder) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-12 space-y-8 pb-24">
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 text-center shadow-lg space-y-6">
-          <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner animate-in zoom-in duration-300">
-            <CheckCircle2 className="w-12 h-12" />
-          </div>
-
-          <div className="space-y-2 max-w-lg mx-auto">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {t('orderSuccessTitle')}
-            </h1>
-            <p className="text-sm text-slate-500">
-              {t('orderSuccessSubtitle')}
-            </p>
-          </div>
-
-          {/* Key order credentials */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl text-start text-xs">
-            <div>
-              <span className="text-slate-400 font-semibold">{t('orderNumber')}</span>
-              <p className="text-sm font-black text-blue-600 font-mono mt-0.5">
-                {confirmedOrder.orderId}
-              </p>
-            </div>
-            <div>
-              <span className="text-slate-400 font-semibold">{t('orderDate')}</span>
-              <p className="text-xs font-bold text-slate-800 mt-0.5">
-                {confirmedOrder.date}
-              </p>
-            </div>
-            <div>
-              <span className="text-slate-400 font-semibold">{t('orderTotal')}</span>
-              <p className="text-sm font-black text-slate-900 mt-0.5">
-                {formatPrice(confirmedOrder.total)}
-              </p>
-            </div>
-            <div>
-              <span className="text-slate-400 font-semibold">{t('deliveryTo')}</span>
-              <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">
-                {confirmedOrder.shippingAddress.city}, {confirmedOrder.shippingAddress.country}
-              </p>
-            </div>
-          </div>
-
-          {/* Tracking Status Progress Bar */}
-          <div className="space-y-3 pt-2 text-start">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {t('trackingTimeline')}
-            </h4>
-            <div className="grid grid-cols-4 gap-2 text-center text-[11px] font-bold">
-              <div className="space-y-1 text-emerald-600">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto">
-                  <Check className="w-4 h-4" />
-                </div>
-                <span>{t('statusReceived')}</span>
-              </div>
-              <div className="space-y-1 text-blue-600">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto ring-4 ring-blue-100">
-                  <Package className="w-4 h-4" />
-                </div>
-                <span>{t('statusPreparing')}</span>
-              </div>
-              <div className="space-y-1 text-slate-400">
-                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
-                  <Truck className="w-4 h-4" />
-                </div>
-                <span>{t('statusShipped')}</span>
-              </div>
-              <div className="space-y-1 text-slate-400">
-                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <span>{t('statusDelivered')}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <button
-              onClick={() => {
-                setConfirmedOrder(null);
-                setActiveScreen('home');
-              }}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-xl transition-all shadow-md cursor-pointer"
-            >
-              {t('backToHome')}
-            </button>
-            <button
-              onClick={() => {
-                setConfirmedOrder(null);
-                setActiveScreen('plp');
-              }}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-6 py-3.5 rounded-xl transition-all cursor-pointer"
-            >
-              {t('continueShopping')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <OrderConfirmationScreen />;
   }
 
   // When cart is empty
   if (cart.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
+        <Breadcrumb
+          items={[
+            { label: t('navHome'), screen: 'home', onClick: () => setActiveScreen('home') },
+            { label: t('cart'), active: true },
+          ]}
+          className="justify-center mb-4"
+        />
         <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
           <ShoppingBag className="w-10 h-10" />
         </div>
@@ -240,7 +161,7 @@ export const CheckoutScreen: React.FC = () => {
         </p>
         <button
           onClick={() => setActiveScreen('plp')}
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2"
+          className="min-h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2 touch-manipulation"
         >
           <span>{t('startShopping')}</span>
           <ArrowIcon className="w-4 h-4" />
@@ -251,6 +172,14 @@ export const CheckoutScreen: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-8 pb-24">
+      {/* 1. Breadcrumbs */}
+      <Breadcrumb
+        items={[
+          { label: t('navHome'), screen: 'home', onClick: () => setActiveScreen('home') },
+          { label: t('cart'), active: true },
+        ]}
+      />
+
       {/* Page Heading */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -304,29 +233,32 @@ export const CheckoutScreen: React.FC = () => {
                   </div>
 
                   {/* Stepper & Delete */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-0.5">
                       <button
                         onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                        className="p-1 hover:bg-white rounded-l text-slate-600 cursor-pointer"
+                        className="min-w-11 min-h-11 flex items-center justify-center hover:bg-white rounded-lg text-slate-600 cursor-pointer touch-manipulation active:scale-90"
+                        aria-label="Decrease quantity"
                       >
-                        <Minus className="w-3.5 h-3.5" />
+                        <Minus className="w-4 h-4" />
                       </button>
-                      <span className="px-2.5 text-xs font-bold text-slate-800">
+                      <span className="px-2 text-xs font-bold text-slate-800 min-w-[24px] text-center">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                        className="p-1 hover:bg-white rounded-r text-slate-600 cursor-pointer"
+                        className="min-w-11 min-h-11 flex items-center justify-center hover:bg-white rounded-lg text-slate-600 cursor-pointer touch-manipulation active:scale-90"
+                        aria-label="Increase quantity"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-4 h-4" />
                       </button>
                     </div>
 
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                      className="min-w-11 min-h-11 flex items-center justify-center text-slate-400 hover:text-rose-600 cursor-pointer transition-colors touch-manipulation active:scale-90"
                       title={t('remove')}
+                      aria-label={t('remove')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -352,7 +284,7 @@ export const CheckoutScreen: React.FC = () => {
                   onChange={(e) =>
                     setShippingAddress((prev) => ({ ...prev, fullName: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white"
+                  className="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white text-xs sm:text-sm"
                 />
               </div>
 
@@ -364,7 +296,7 @@ export const CheckoutScreen: React.FC = () => {
                   onChange={(e) =>
                     setShippingAddress((prev) => ({ ...prev, email: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white"
+                  className="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white text-xs sm:text-sm"
                 />
               </div>
 
@@ -376,7 +308,7 @@ export const CheckoutScreen: React.FC = () => {
                   onChange={(e) =>
                     setShippingAddress((prev) => ({ ...prev, phone: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white"
+                  className="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white text-xs sm:text-sm"
                 />
               </div>
 
@@ -387,7 +319,7 @@ export const CheckoutScreen: React.FC = () => {
                   onChange={(e) =>
                     setShippingAddress((prev) => ({ ...prev, city: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
+                  className="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white cursor-pointer text-xs sm:text-sm"
                 >
                   <option value="Dubai">Dubai (دبي)</option>
                   <option value="Abu Dhabi">Abu Dhabi (أبوظبي)</option>
@@ -408,7 +340,7 @@ export const CheckoutScreen: React.FC = () => {
                     setShippingAddress((prev) => ({ ...prev, addressLine: e.target.value }))
                   }
                   placeholder={t('addressPlaceholder')}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white"
+                  className="w-full min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-600 focus:bg-white text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -432,9 +364,9 @@ export const CheckoutScreen: React.FC = () => {
                   <button
                     key={del.id}
                     onClick={() => setDeliveryMethod(del.id as any)}
-                    className={`p-4 rounded-xl border text-start transition-all cursor-pointer flex flex-col justify-between ${
+                    className={`min-h-[72px] p-4 rounded-xl border text-start transition-all cursor-pointer flex flex-col justify-between touch-manipulation active:scale-98 ${
                       isSelected
-                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs ring-1 ring-blue-500'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -473,7 +405,7 @@ export const CheckoutScreen: React.FC = () => {
                   <button
                     key={pay.id}
                     onClick={() => setPaymentMethod(pay.id as any)}
-                    className={`p-4 rounded-xl border text-start transition-all cursor-pointer flex items-start gap-3 ${
+                    className={`min-h-[64px] p-4 rounded-xl border text-start transition-all cursor-pointer flex items-start gap-3 touch-manipulation active:scale-98 ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50/50 shadow-2xs ring-1 ring-blue-500'
                         : 'border-slate-200 hover:border-slate-300'
@@ -498,7 +430,7 @@ export const CheckoutScreen: React.FC = () => {
                     type="text"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-mono"
+                    className="w-full min-h-[44px] bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none font-mono text-xs sm:text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -508,7 +440,7 @@ export const CheckoutScreen: React.FC = () => {
                       type="text"
                       value={cardExpiry}
                       onChange={(e) => setCardExpiry(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-mono"
+                      className="w-full min-h-[44px] bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none font-mono text-xs sm:text-sm"
                     />
                   </div>
                   <div className="space-y-1">
@@ -518,7 +450,7 @@ export const CheckoutScreen: React.FC = () => {
                       value={cardCvc}
                       onChange={(e) => setCardCvc(e.target.value)}
                       maxLength={4}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none font-mono"
+                      className="w-full min-h-[44px] bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none font-mono text-xs sm:text-sm"
                     />
                   </div>
                 </div>
@@ -528,8 +460,8 @@ export const CheckoutScreen: React.FC = () => {
         </div>
 
         {/* Right Column: Order Summary & Placement (5 cols) */}
-        <div className="lg:col-span-5 space-y-6 sticky top-24">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
             <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider pb-3 border-b border-slate-100">
               {t('orderSummary')}
             </h3>
@@ -546,11 +478,11 @@ export const CheckoutScreen: React.FC = () => {
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value)}
                   placeholder={t('enterPromoCode')}
-                  className="flex-1 bg-slate-50 border border-slate-200 text-slate-900 text-xs px-3 py-2.5 rounded-xl uppercase outline-none focus:border-blue-600"
+                  className="flex-1 min-h-[44px] bg-slate-50 border border-slate-200 text-slate-900 text-xs px-3.5 py-2.5 rounded-xl uppercase outline-none focus:border-blue-600"
                 />
                 <button
                   type="submit"
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer transition-colors"
+                  className="min-h-[44px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer transition-colors touch-manipulation active:scale-95"
                 >
                   {t('applyPromo')}
                 </button>
@@ -558,7 +490,7 @@ export const CheckoutScreen: React.FC = () => {
 
               {couponFeedback && (
                 <div
-                  className={`text-xs font-semibold p-2 rounded-lg ${
+                  className={`text-xs font-semibold p-2.5 rounded-lg ${
                     couponFeedback.success
                       ? 'bg-emerald-50 text-emerald-700'
                       : 'bg-rose-50 text-rose-700'
@@ -608,7 +540,7 @@ export const CheckoutScreen: React.FC = () => {
               id="checkout-place-order-btn"
               onClick={handlePlaceOrder}
               disabled={isSubmitting}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-300 text-white py-4 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer group"
+              className="w-full min-h-[48px] bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-blue-300 text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer group touch-manipulation active:scale-95"
             >
               {isSubmitting ? (
                 <span>Processing Order...</span>

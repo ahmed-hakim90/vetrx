@@ -71,7 +71,7 @@ export const WishlistDrawer: React.FC = () => {
               {wishlist.length > 0 && (
                 <button
                   onClick={clearWishlist}
-                  className="text-xs text-slate-400 hover:text-rose-600 font-medium transition-colors cursor-pointer"
+                  className="min-h-[44px] px-2 flex items-center text-xs text-slate-400 hover:text-rose-600 font-medium transition-colors cursor-pointer touch-manipulation active:scale-95"
                 >
                   {t('clearWishlist')}
                 </button>
@@ -79,7 +79,7 @@ export const WishlistDrawer: React.FC = () => {
               <button
                 id="close-wishlist-drawer-btn"
                 onClick={() => setIsWishlistOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer touch-manipulation active:scale-90"
                 aria-label={t('close')}
               >
                 <X className="w-5 h-5" />
@@ -105,7 +105,7 @@ export const WishlistDrawer: React.FC = () => {
                     setIsWishlistOpen(false);
                     setActiveScreen('plp');
                   }}
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2"
+                  className="min-h-[44px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2 touch-manipulation active:scale-95"
                 >
                   <span>{t('startShopping')}</span>
                   <ArrowIcon className="w-3.5 h-3.5" />
@@ -140,8 +140,9 @@ export const WishlistDrawer: React.FC = () => {
                         </h4>
                         <button
                           onClick={() => toggleWishlist(prod.id)}
-                          className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer transition-colors"
+                          className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-rose-500 p-1 cursor-pointer transition-colors touch-manipulation active:scale-90"
                           title={t('remove')}
+                          aria-label={t('remove')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -167,7 +168,7 @@ export const WishlistDrawer: React.FC = () => {
 
                       <button
                         onClick={() => handleMoveToCart(prod)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        className="min-h-[40px] bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-xs cursor-pointer touch-manipulation active:scale-95"
                       >
                         <ShoppingCart className="w-3 h-3" />
                         <span>{t('moveToCart')}</span>
@@ -187,7 +188,7 @@ export const WishlistDrawer: React.FC = () => {
                   wishlistProducts.forEach((p) => handleMoveToCart(p));
                   setIsWishlistOpen(false);
                 }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white py-3.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer touch-manipulation active:scale-95"
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>Move All to Cart ({wishlistProducts.length})</span>

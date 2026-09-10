@@ -44,10 +44,37 @@ export const Header: React.FC = () => {
   } = useStore();
 
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [headerQuery, setHeaderQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Track window scroll to collapse top announcement and secondary bars on mobile
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > 25) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Focus mobile input when opened
+  useEffect(() => {
+    if (mobileSearchOpen && mobileSearchInputRef.current) {
+      mobileSearchInputRef.current.focus();
+    }
+  }, [mobileSearchOpen]);
 
   // Close search popover when clicked outside
   useEffect(() => {
@@ -76,6 +103,8 @@ export const Header: React.FC = () => {
   const handleSelectProduct = (productId: string) => {
     setHeaderQuery('');
     setSearchOpen(false);
+    setMobileSearchOpen(false);
+    setMobileMenuOpen(false);
     navigateToProduct(productId);
   };
 
@@ -88,17 +117,23 @@ export const Header: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all">
-      {/* 1. Top Announcement Bar */}
-      <div className="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 font-medium tracking-tight">
-            <span className="inline-flex items-center justify-center p-1 rounded-full bg-amber-400/20 text-amber-300">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs transition-all duration-300">
+      {/* 1. Collapsing Top Announcement Bar (collapses smoothly on scroll on all viewports) */}
+      <div
+        className={`bg-slate-900 text-slate-200 text-xs px-4 border-slate-800 transition-all duration-300 ease-in-out ${
+          isScrolled
+            ? 'max-h-0 py-0 opacity-0 overflow-hidden border-b-0'
+            : 'max-h-16 py-1.5 sm:py-2 border-b opacity-100'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-2 font-medium tracking-tight text-[11px] sm:text-xs">
+            <span className="inline-flex items-center justify-center p-1 rounded-full bg-amber-400/20 text-amber-300 shrink-0">
               <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
             </span>
-            <span>{t('topAnnouncement')}</span>
+            <span className="truncate">{t('topAnnouncement')}</span>
           </div>
-          <div className="flex items-center gap-4 text-slate-300 text-xs">
+          <div className="flex items-center gap-4 text-slate-300 text-[11px] sm:text-xs">
             <span className="hidden md:inline-flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               {t('authorizedGCCWarranty')}
@@ -109,13 +144,19 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Multi-Store & Brand Switcher Bar */}
-      <div className="bg-slate-100/90 border-b border-slate-200 px-4 py-1.5 text-xs">
+      {/* 2. Multi-Store & Brand Switcher Bar (collapses on mobile when scrolled) */}
+      <div
+        className={`bg-slate-100/90 border-b border-slate-200 px-4 text-xs transition-all duration-300 ease-in-out ${
+          isScrolled ? 'hidden md:block py-1' : 'py-1.5'
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Store className="w-3.5 h-3.5 text-slate-600" />
-            <span className="font-semibold text-slate-600 hidden sm:inline">{t('selectStore')}:</span>
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+            <Store className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span className="font-semibold text-slate-600 hidden sm:inline whitespace-nowrap">
+              {t('selectStore')}:
+            </span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
               {STORES.map((s) => {
                 const isActive = s.id === activeStore;
                 return (
@@ -123,17 +164,17 @@ export const Header: React.FC = () => {
                     key={s.id}
                     id={`store-switcher-${s.id}`}
                     onClick={() => setActiveStore(s.id)}
-                    className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`min-h-[36px] sm:min-h-[30px] px-2.5 sm:px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 touch-manipulation ${
                       isActive
                         ? 'bg-white text-slate-900 shadow-xs border border-slate-300'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                     }`}
                   >
                     <span
-                      className="w-2 h-2 rounded-full"
+                      className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full shrink-0"
                       style={{ backgroundColor: s.primaryColor }}
                     />
-                    <span>{s.name[language]}</span>
+                    <span className="text-xs">{s.name[language]}</span>
                     {isActive && (
                       <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full hidden md:inline">
                         {s.badge[language]}
@@ -169,46 +210,50 @@ export const Header: React.FC = () => {
       </div>
 
       {/* 3. Main Brand & Search Bar */}
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+      <div
+        className={`max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-200 ${
+          isScrolled ? 'py-2' : 'py-2.5 sm:py-3'
+        }`}
+      >
         {/* Brand Logo & Store Name */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 cursor-pointer"
-            aria-label="Toggle menu"
+            className="md:hidden min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center cursor-pointer touch-manipulation transition-transform active:scale-95"
+            aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           <button
             onClick={() => setActiveScreen('home')}
-            className="flex items-center gap-2.5 text-start cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-2.5 text-start cursor-pointer group min-h-[44px] touch-manipulation"
           >
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md transition-transform group-hover:scale-105"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-md transition-transform group-hover:scale-105 shrink-0"
               style={{
                 backgroundColor: currentStoreConfig.primaryColor,
               }}
             >
-              <Zap className="w-6 h-6 fill-white text-white" />
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6 fill-white text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-black tracking-tight text-slate-900">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className="text-base sm:text-xl font-black tracking-tight text-slate-900 leading-tight">
                   {currentStoreConfig.name[language]}
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
                   GCC
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium line-clamp-1 max-w-[220px]">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium line-clamp-1 max-w-[140px] sm:max-w-[220px]">
                 {currentStoreConfig.tagline[language]}
               </p>
             </div>
           </button>
         </div>
 
-        {/* Live Search Input with Suggestions */}
+        {/* Live Search Input with Suggestions (Desktop) */}
         <div ref={searchRef} className="relative flex-1 max-w-xl hidden md:block">
           <div className="relative">
             <input
@@ -227,7 +272,7 @@ export const Header: React.FC = () => {
             {headerQuery && (
               <button
                 onClick={() => setHeaderQuery('')}
-                className="absolute right-3.5 rtl:right-auto rtl:left-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="min-w-[36px] min-h-[36px] flex items-center justify-center absolute right-1.5 rtl:right-auto rtl:left-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -247,12 +292,12 @@ export const Header: React.FC = () => {
                       <button
                         key={prod.id}
                         onClick={() => handleSelectProduct(prod.id)}
-                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors text-start cursor-pointer"
+                        className="w-full min-h-[44px] flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors text-start cursor-pointer touch-manipulation"
                       >
                         <img
                           src={prod.images[0]}
                           alt={prod.title[language]}
-                          className="w-10 h-10 rounded-md object-cover border border-slate-200"
+                          className="w-10 h-10 rounded-md object-cover border border-slate-200 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-900 truncate">
@@ -284,7 +329,7 @@ export const Header: React.FC = () => {
                           onClick={() => {
                             setHeaderQuery(sug);
                           }}
-                          className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full cursor-pointer transition-colors"
+                          className="text-xs min-h-[32px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full cursor-pointer transition-colors active:scale-95"
                         >
                           {sug}
                         </button>
@@ -297,14 +342,26 @@ export const Header: React.FC = () => {
           )}
         </div>
 
-        {/* Right Controls: Language, Currency, Wishlist, Cart */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right Controls: Mobile Search Trigger, Language, Currency, Wishlist, Cart */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Mobile Search Button (Quick Collapsible Search toggle) */}
+          <button
+            id="mobile-search-toggle-btn"
+            onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+            className={`md:hidden min-w-[44px] min-h-[44px] p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer touch-manipulation active:scale-95 ${
+              mobileSearchOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-700 hover:bg-slate-100'
+            }`}
+            aria-label="Search catalog"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
           {/* Language Switcher Pill */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
+          <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 text-xs font-bold">
             <button
               id="lang-btn-en"
               onClick={() => setLanguage('en')}
-              className={`px-2 py-1 rounded transition-all cursor-pointer ${
+              className={`min-h-[36px] sm:min-h-[30px] px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer touch-manipulation flex items-center justify-center ${
                 language === 'en'
                   ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
@@ -315,7 +372,7 @@ export const Header: React.FC = () => {
             <button
               id="lang-btn-ar"
               onClick={() => setLanguage('ar')}
-              className={`px-2 py-1 rounded transition-all cursor-pointer font-['Cairo'] ${
+              className={`min-h-[36px] sm:min-h-[30px] px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer touch-manipulation flex items-center justify-center font-['Cairo'] ${
                 language === 'ar'
                   ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
@@ -326,13 +383,13 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Currency Selector */}
-          <div className="relative">
+          <div className="relative hidden xs:block">
             <select
               id="currency-selector"
               value={currency}
               onChange={(e) => setCurrency(e.target.value as Currency)}
               aria-label={t('currency')}
-              className="bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer outline-none focus:ring-1 focus:ring-blue-500"
+              className="min-h-[40px] sm:min-h-[36px] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
             >
               <option value="AED">AED (د.إ)</option>
               <option value="SAR">SAR (ر.س)</option>
@@ -340,28 +397,30 @@ export const Header: React.FC = () => {
             </select>
           </div>
 
-          {/* Wishlist Button */}
+          {/* Wishlist Button (min 44px touch target) */}
           <button
             id="header-wishlist-btn"
             onClick={() => setIsWishlistOpen(true)}
-            className="relative p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-all cursor-pointer flex items-center justify-center relative touch-manipulation active:scale-95"
             title={t('wishlist')}
+            aria-label={t('wishlist')}
           >
             <Heart className="w-5 h-5" />
             {wishlist.length > 0 && (
-              <span className="absolute -top-1 -right-1 rtl:-right-auto rtl:-left-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+              <span className="absolute top-1.5 right-1.5 rtl:right-auto rtl:left-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs pointer-events-none">
                 {wishlist.length}
               </span>
             )}
           </button>
 
-          {/* Cart Trigger Button */}
+          {/* Cart Trigger Button (min 44px touch target) */}
           <button
             id="header-cart-btn"
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+            className="min-h-[44px] min-w-[44px] sm:min-w-0 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 active:bg-black text-white px-3 sm:px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer touch-manipulation active:scale-95"
+            aria-label={t('cart')}
           >
-            <div className="relative">
+            <div className="relative flex items-center justify-center">
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 rtl:-right-auto rtl:-left-2 w-4 h-4 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black flex items-center justify-center">
@@ -379,13 +438,63 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
+      {/* Collapsible Mobile Quick-Search Bar */}
+      {mobileSearchOpen && (
+        <div className="md:hidden px-3 pb-3 pt-1 border-t border-slate-100 bg-white animate-in slide-in-from-top-2 duration-200">
+          <div className="relative">
+            <input
+              ref={mobileSearchInputRef}
+              type="text"
+              value={headerQuery}
+              onChange={(e) => setHeaderQuery(e.target.value)}
+              placeholder={t('searchPlaceholder')}
+              className="w-full bg-slate-100 text-slate-900 text-sm pl-10 pr-10 rtl:pr-10 rtl:pl-10 py-2.5 rounded-xl border border-slate-200 outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 rtl:left-auto rtl:right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {headerQuery && (
+              <button
+                onClick={() => setHeaderQuery('')}
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute right-1 rtl:right-auto rtl:left-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick results preview on mobile search */}
+          {headerQuery.trim() && searchResults.length > 0 && (
+            <div className="mt-2 bg-slate-50 rounded-xl p-2 border border-slate-200 space-y-1 max-h-60 overflow-y-auto">
+              {searchResults.map((prod) => (
+                <button
+                  key={prod.id}
+                  onClick={() => handleSelectProduct(prod.id)}
+                  className="w-full min-h-[44px] flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer touch-manipulation"
+                >
+                  <img
+                    src={prod.images[0]}
+                    alt={prod.title[language]}
+                    className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">
+                      {prod.title[language]}
+                    </p>
+                    <p className="text-[11px] text-blue-600 font-semibold">{formatPrice(prod.price)}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 4. Category Navigation Bar (Desktop) */}
       <div className="border-t border-slate-100 bg-white hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 py-1">
             <button
               onClick={() => setActiveScreen('plp')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md font-bold text-slate-800 hover:bg-slate-100 cursor-pointer"
+              className="min-h-[38px] flex items-center gap-1.5 px-3 py-2 rounded-md font-bold text-slate-800 hover:bg-slate-100 cursor-pointer"
             >
               <Menu className="w-4 h-4 text-blue-600" />
               <span>{t('categoriesMega')}</span>
@@ -393,7 +502,7 @@ export const Header: React.FC = () => {
 
             <button
               onClick={() => setActiveScreen('home')}
-              className={`px-3 py-2 rounded-md font-semibold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-3 py-2 rounded-md font-semibold transition-colors cursor-pointer ${
                 activeScreen === 'home'
                   ? 'text-blue-600 bg-blue-50/70'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -408,7 +517,7 @@ export const Header: React.FC = () => {
                 <button
                   key={cat.id}
                   onClick={() => navigateToCategory(cat.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-md font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="min-h-[38px] flex items-center gap-1.5 px-3 py-2 rounded-md font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <IconComponent className="w-3.5 h-3.5 text-slate-400" />
                   <span>{cat.name}</span>
@@ -422,7 +531,7 @@ export const Header: React.FC = () => {
               onClick={() => {
                 navigateToCategory('all');
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
+              className="min-h-[36px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-rose-500" />
               <span>{t('navFlashDeals')}</span>
@@ -433,8 +542,8 @@ export const Header: React.FC = () => {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-4 shadow-xl animate-in slide-in-from-top-3 duration-200">
-          {/* Mobile Search with live results */}
+        <div className="md:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-4 shadow-xl animate-in slide-in-from-top-3 duration-200 max-h-[80vh] overflow-y-auto">
+          {/* Mobile Search inside menu */}
           <div className="space-y-2">
             <div className="relative">
               <input
@@ -447,7 +556,7 @@ export const Header: React.FC = () => {
               {headerQuery && (
                 <button
                   onClick={() => setHeaderQuery('')}
-                  className="absolute right-3 rtl:right-auto rtl:left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute right-1 rtl:right-auto rtl:left-1 top-1/2 -translate-y-1/2 text-slate-400"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -464,7 +573,7 @@ export const Header: React.FC = () => {
                       setMobileMenuOpen(false);
                       handleSelectProduct(prod.id);
                     }}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer"
+                    className="w-full min-h-[44px] flex items-center gap-2.5 p-2 rounded-lg hover:bg-white text-start transition-colors cursor-pointer touch-manipulation"
                   >
                     <img
                       src={prod.images[0]}
@@ -483,18 +592,18 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Screen Navigation for Evaluators */}
+          {/* Quick Screen Navigation for Evaluators (44px touch target buttons) */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Storefront Screens
             </span>
-            <div className="grid grid-cols-2 gap-1.5 text-xs font-semibold">
+            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
               <button
                 onClick={() => {
                   setActiveScreen('home');
                   setMobileMenuOpen(false);
                 }}
-                className={`p-2 rounded-lg text-start transition-colors ${
+                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
                   activeScreen === 'home' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                 }`}
               >
@@ -505,7 +614,7 @@ export const Header: React.FC = () => {
                   setActiveScreen('plp');
                   setMobileMenuOpen(false);
                 }}
-                className={`p-2 rounded-lg text-start transition-colors ${
+                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
                   activeScreen === 'plp' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                 }`}
               >
@@ -516,7 +625,7 @@ export const Header: React.FC = () => {
                   setActiveScreen('pdp');
                   setMobileMenuOpen(false);
                 }}
-                className={`p-2 rounded-lg text-start transition-colors ${
+                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
                   activeScreen === 'pdp' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                 }`}
               >
@@ -527,7 +636,7 @@ export const Header: React.FC = () => {
                   setActiveScreen('checkout');
                   setMobileMenuOpen(false);
                 }}
-                className={`p-2 rounded-lg text-start transition-colors ${
+                className={`min-h-[44px] p-2.5 rounded-xl text-start transition-colors flex items-center touch-manipulation ${
                   activeScreen === 'checkout' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                 }`}
               >
@@ -536,12 +645,12 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Categories */}
+          {/* Categories (min 44px touch targets) */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {t('shopByCategory')}
             </span>
-            <div className="grid grid-cols-2 gap-1.5 text-xs">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               {navCategories.map((cat) => {
                 const IconComp = cat.icon;
                 return (
@@ -551,9 +660,9 @@ export const Header: React.FC = () => {
                       navigateToCategory(cat.id);
                       setMobileMenuOpen(false);
                     }}
-                    className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 font-medium text-slate-700 text-start flex items-center gap-2"
+                    className="min-h-[44px] p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 font-medium text-slate-700 text-start flex items-center gap-2 touch-manipulation"
                   >
-                    <IconComp className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <IconComp className="w-4 h-4 text-slate-500 shrink-0" />
                     <span className="truncate">{cat.name}</span>
                   </button>
                 );
@@ -566,7 +675,7 @@ export const Header: React.FC = () => {
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {t('selectStore')}
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {STORES.map((s) => (
                 <button
                   key={s.id}
@@ -574,13 +683,13 @@ export const Header: React.FC = () => {
                     setActiveStore(s.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                  className={`min-h-[44px] text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all touch-manipulation ${
                     activeStore === s.id
                       ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.primaryColor }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.primaryColor }} />
                   <span>{s.name[language]}</span>
                 </button>
               ))}
@@ -591,3 +700,4 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+

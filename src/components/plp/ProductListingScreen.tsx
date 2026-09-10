@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   SlidersHorizontal,
   LayoutGrid,
@@ -17,6 +17,12 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { PRODUCTS, CATEGORIES } from '../../data/mockData';
 import { Product } from '../../types/store';
+import {
+  Skeleton,
+  ProductGridSkeleton,
+  FilterSidebarSkeleton,
+} from '../feedback';
+import { Breadcrumb } from '../common/Breadcrumb';
 
 export const ProductListingScreen: React.FC = () => {
   const {
@@ -35,8 +41,18 @@ export const ProductListingScreen: React.FC = () => {
     setActiveScreen,
   } = useStore();
 
+  const [isHydrating, setIsHydrating] = useState(true);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
+
+  // Initial state hydration simulation to display skeleton feedback for perceived performance
+  useEffect(() => {
+    setIsHydrating(true);
+    const timer = setTimeout(() => {
+      setIsHydrating(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [filterState.category, activeStore]);
 
   // Available brands in the catalog
   const availableBrands = useMemo(() => {
@@ -116,19 +132,8 @@ export const ProductListingScreen: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 pb-20">
-      {/* 1. Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-xs text-slate-500">
-        <button
-          onClick={() => setActiveScreen('home')}
-          className="hover:text-slate-900 transition-colors cursor-pointer"
-        >
-          {t('navHome')}
-        </button>
-        <span>/</span>
-        <span className="text-slate-900 font-semibold">
-          {activeCategoryObj ? activeCategoryObj.name[language] : t('allProductsTitle')}
-        </span>
-      </nav>
+      {/* 1. Dynamic Breadcrumbs */}
+      <Breadcrumb />
 
       {/* 2. Top Title & Control Toolbar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
@@ -137,8 +142,20 @@ export const ProductListingScreen: React.FC = () => {
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               {activeCategoryObj ? activeCategoryObj.name[language] : t('allProductsTitle')}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {t('showingResults')} <span className="font-bold text-slate-800">{filteredProducts.length}</span> {t('of')} <span className="font-bold text-slate-800">{PRODUCTS.length}</span> {t('results')}
+            <p className="text-xs text-slate-500 mt-0.5 min-h-[20px] flex items-center gap-1.5">
+              {isHydrating ? (
+                <span className="inline-flex items-center gap-1 text-slate-400">
+                  <span>{t('showingResults')}</span>
+                  <Skeleton variant="text" className="w-10 h-3.5 inline-block" />
+                  <span>{t('of')}</span>
+                  <Skeleton variant="text" className="w-10 h-3.5 inline-block" />
+                  <span>{t('results')}</span>
+                </span>
+              ) : (
+                <>
+                  {t('showingResults')} <span className="font-bold text-slate-800">{filteredProducts.length}</span> {t('of')} <span className="font-bold text-slate-800">{PRODUCTS.length}</span> {t('results')}
+                </>
+              )}
             </p>
           </div>
 
@@ -147,7 +164,7 @@ export const ProductListingScreen: React.FC = () => {
             <button
               id="mobile-filter-trigger-btn"
               onClick={() => setMobileFiltersOpen(true)}
-              className="lg:hidden flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="lg:hidden min-h-[44px] flex items-center gap-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer touch-manipulation active:scale-95"
             >
               <SlidersHorizontal className="w-4 h-4" />
               <span>{t('filters')}</span>
@@ -169,7 +186,7 @@ export const ProductListingScreen: React.FC = () => {
                   }))
                 }
                 aria-label={t('sortBy')}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
+                className="min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer touch-manipulation"
               >
                 <option value="featured">{t('sortFeatured')}</option>
                 <option value="price-asc">{t('sortPriceAsc')}</option>
@@ -179,31 +196,45 @@ export const ProductListingScreen: React.FC = () => {
               </select>
             </div>
 
-            {/* View Mode Toggle (Grid vs List) */}
+            {/* View Mode Toggle (Grid vs List) + Rehydrate simulator */}
             <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
                 id="plp-grid-view-btn"
                 onClick={() => setFilterState((prev) => ({ ...prev, viewMode: 'grid' }))}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors cursor-pointer touch-manipulation ${
                   filterState.viewMode === 'grid'
                     ? 'bg-white text-slate-900 shadow-2xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title={t('gridView')}
+                aria-label={t('gridView')}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 id="plp-list-view-btn"
                 onClick={() => setFilterState((prev) => ({ ...prev, viewMode: 'list' }))}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors cursor-pointer touch-manipulation ${
                   filterState.viewMode === 'list'
                     ? 'bg-white text-slate-900 shadow-2xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title={t('listView')}
+                aria-label={t('listView')}
               >
                 <List className="w-4 h-4" />
+              </button>
+              <button
+                id="plp-rehydrate-sim-btn"
+                onClick={() => {
+                  setIsHydrating(true);
+                  setTimeout(() => setIsHydrating(false), 600);
+                }}
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-800 transition-colors cursor-pointer touch-manipulation active:scale-90"
+                title="Simulate Initial State Hydration"
+                aria-label="Simulate Initial State Hydration"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -269,19 +300,22 @@ export const ProductListingScreen: React.FC = () => {
       {/* 3. Main Grid Layout: Filters Sidebar (Desktop) + Product Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Desktop Filter Sidebar */}
-        <aside className="hidden lg:block bg-white rounded-2xl border border-slate-200 p-5 space-y-6 shadow-xs sticky top-24">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-              <span>{t('filterBy')}</span>
-            </h3>
-            <button
-              onClick={resetFilters}
-              className="text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
-            >
-              {t('clearAll')}
-            </button>
-          </div>
+        {isHydrating ? (
+          <FilterSidebarSkeleton className="hidden lg:block sticky top-24" />
+        ) : (
+          <aside className="hidden lg:block bg-white rounded-2xl border border-slate-200 p-5 space-y-6 shadow-xs sticky top-24">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+                <span>{t('filterBy')}</span>
+              </h3>
+              <button
+                onClick={resetFilters}
+                className="text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
+              >
+                {t('clearAll')}
+              </button>
+            </div>
 
           {/* Categories List */}
           <div className="space-y-2">
@@ -418,10 +452,17 @@ export const ProductListingScreen: React.FC = () => {
             </div>
           </div>
         </aside>
+        )}
 
         {/* Products Stream */}
         <div className="lg:col-span-3">
-          {filteredProducts.length === 0 ? (
+          {isHydrating ? (
+            <ProductGridSkeleton
+              count={6}
+              viewMode={filterState.viewMode}
+              columns={3}
+            />
+          ) : filteredProducts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
               <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                 <SlidersHorizontal className="w-8 h-8" />
@@ -463,21 +504,22 @@ export const ProductListingScreen: React.FC = () => {
                       )}
 
                       {/* Action buttons (Wishlist & Quick View) */}
-                      <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3 flex flex-col gap-1.5 z-10">
+                      <div className="absolute top-2.5 right-2.5 rtl:right-auto rtl:left-2.5 flex flex-col gap-1.5 z-10">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleWishlist(product.id);
                           }}
-                          className={`p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
+                          className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs touch-manipulation active:scale-90 ${
                             inWish
                               ? 'bg-rose-50 text-rose-500'
                               : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
                           }`}
                           title={t('addToWishlist')}
+                          aria-label={t('addToWishlist')}
                         >
                           <Heart
-                            className={`w-3.5 h-3.5 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
+                            className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
                           />
                         </button>
 
@@ -486,10 +528,11 @@ export const ProductListingScreen: React.FC = () => {
                             e.stopPropagation();
                             setQuickViewProductId(product.id);
                           }}
-                          className="p-2 rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs"
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs touch-manipulation active:scale-90"
                           title={t('quickView')}
+                          aria-label={t('quickView')}
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -530,16 +573,18 @@ export const ProductListingScreen: React.FC = () => {
 
                         <button
                           onClick={(e) => handleQuickAdd(product, e)}
-                          className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                          className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 touch-manipulation active:scale-95"
+                          title={t('addToCart')}
+                          aria-label={t('addToCart')}
                         >
                           {addedId === product.id ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-4 h-4 text-emerald-400" />
                               <span>{t('addedToCart')}</span>
                             </>
                           ) : (
                             <>
-                              <ShoppingCart className="w-3.5 h-3.5" />
+                              <ShoppingCart className="w-4 h-4" />
                               <span>{t('addToCart')}</span>
                             </>
                           )}
@@ -623,9 +668,10 @@ export const ProductListingScreen: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={(e) => handleQuickAdd(product, e)}
-                          className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 min-h-[44px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-95"
+                          title={t('addToCart')}
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
+                          <ShoppingCart className="w-4 h-4" />
                           <span>{addedId === product.id ? t('addedToCart') : t('addToCart')}</span>
                         </button>
                         <button
@@ -633,8 +679,9 @@ export const ProductListingScreen: React.FC = () => {
                             e.stopPropagation();
                             setQuickViewProductId(product.id);
                           }}
-                          className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors cursor-pointer touch-manipulation active:scale-90"
                           title={t('quickView')}
+                          aria-label={t('quickView')}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -643,10 +690,11 @@ export const ProductListingScreen: React.FC = () => {
                             e.stopPropagation();
                             toggleWishlist(product.id);
                           }}
-                          className={`p-2.5 rounded-xl border border-slate-200 transition-colors cursor-pointer ${
+                          className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-slate-200 transition-colors cursor-pointer touch-manipulation active:scale-90 ${
                             inWish ? 'bg-rose-50 text-rose-500 border-rose-200' : 'text-slate-500 hover:bg-slate-50'
                           }`}
                           title={t('addToWishlist')}
+                          aria-label={t('addToWishlist')}
                         >
                           <Heart className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`} />
                         </button>
@@ -679,7 +727,8 @@ export const ProductListingScreen: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setMobileFiltersOpen(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 transition-colors"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-800 transition-colors touch-manipulation"
+                    aria-label="Close filters"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -693,7 +742,7 @@ export const ProductListingScreen: React.FC = () => {
                   <div className="space-y-1">
                     <button
                       onClick={() => setFilterState((prev) => ({ ...prev, category: 'all' }))}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-start transition-colors ${
+                      className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-start transition-colors touch-manipulation ${
                         filterState.category === 'all'
                           ? 'bg-blue-600 text-white'
                           : 'text-slate-700 hover:bg-slate-100'
@@ -706,7 +755,7 @@ export const ProductListingScreen: React.FC = () => {
                       <button
                         key={cat.id}
                         onClick={() => setFilterState((prev) => ({ ...prev, category: cat.id }))}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-start transition-colors ${
+                        className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-start transition-colors touch-manipulation ${
                           filterState.category === cat.id
                             ? 'bg-blue-600 text-white'
                             : 'text-slate-700 hover:bg-slate-100'
@@ -739,7 +788,7 @@ export const ProductListingScreen: React.FC = () => {
                         maxPrice: Number(e.target.value),
                       }))
                     }
-                    className="w-full accent-blue-600 cursor-pointer"
+                    className="w-full accent-blue-600 cursor-pointer h-3"
                   />
                   <div className="flex justify-between text-[11px] text-slate-500">
                     <span>{formatPrice(0)}</span>
@@ -752,11 +801,11 @@ export const ProductListingScreen: React.FC = () => {
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                     {t('brands')}
                   </h4>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto">
                     {availableBrands.map((b) => (
                       <label
                         key={b}
-                        className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-950"
+                        className="min-h-11 flex items-center gap-3 text-xs text-slate-700 cursor-pointer hover:text-slate-950 px-1 touch-manipulation"
                       >
                         <input
                           type="checkbox"
@@ -771,7 +820,7 @@ export const ProductListingScreen: React.FC = () => {
                 </div>
 
                 {/* In Stock Only Switch */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div className="min-h-[44px] flex items-center justify-between pt-2 border-t border-slate-100">
                   <span className="text-xs font-bold text-slate-800">{t('inStockOnly')}</span>
                   <input
                     type="checkbox"
@@ -779,7 +828,7 @@ export const ProductListingScreen: React.FC = () => {
                     onChange={(e) =>
                       setFilterState((prev) => ({ ...prev, inStockOnly: e.target.checked }))
                     }
-                    className="rounded text-blue-600 w-4 h-4 cursor-pointer"
+                    className="rounded text-blue-600 w-5 h-5 cursor-pointer touch-manipulation"
                   />
                 </div>
 
@@ -798,13 +847,13 @@ export const ProductListingScreen: React.FC = () => {
                             minRating: prev.minRating === ratingVal ? 0 : ratingVal,
                           }))
                         }
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                        className={`w-full min-h-[44px] flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer touch-manipulation ${
                           filterState.minRating === ratingVal
                             ? 'bg-amber-50 text-amber-900 border border-amber-200'
                             : 'text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                         <span>{ratingVal} {t('andAbove')}</span>
                       </button>
                     ))}
@@ -815,13 +864,13 @@ export const ProductListingScreen: React.FC = () => {
               <div className="pt-4 border-t border-slate-200 flex gap-2">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="flex-1 min-h-[44px] py-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer touch-manipulation"
                 >
                   {t('clearAll')}
                 </button>
                 <button
                   onClick={() => setMobileFiltersOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="flex-1 min-h-[44px] py-3 bg-slate-900 hover:bg-slate-800 active:bg-black text-white rounded-xl text-xs font-bold transition-colors cursor-pointer touch-manipulation"
                 >
                   {t('showingResults')} ({filteredProducts.length})
                 </button>

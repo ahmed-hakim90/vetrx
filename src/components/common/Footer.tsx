@@ -223,7 +223,19 @@ export const Footer: React.FC = () => {
       {/* Payment Badges & Copyright */}
       <div className="border-t border-slate-900 bg-slate-950 px-4 py-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© {new Date().getFullYear()} {t('allRightsReserved')}</p>
+          <div className="flex items-center gap-3">
+            <p>© {new Date().getFullYear()} {t('allRightsReserved')}</p>
+            <span>•</span>
+            <button
+              onClick={() => {
+                const btn = document.getElementById('seo-inspector-toggle-btn');
+                if (btn) btn.click();
+              }}
+              className="text-slate-400 hover:text-blue-400 transition-colors underline cursor-pointer"
+            >
+              SEO &amp; Indexing Preview
+            </button>
+          </div>
 
           {/* Payment Chips */}
           <div className="flex flex-wrap items-center gap-2">

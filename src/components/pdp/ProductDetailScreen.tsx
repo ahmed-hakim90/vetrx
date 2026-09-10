@@ -120,12 +120,13 @@ export const ProductDetailScreen: React.FC = () => {
 
             <button
               onClick={() => toggleWishlist(product.id)}
-              className={`absolute top-4 right-4 rtl:right-auto rtl:left-4 p-2.5 rounded-full backdrop-blur-md shadow-md transition-all cursor-pointer ${
+              className={`absolute top-4 right-4 rtl:right-auto rtl:left-4 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full backdrop-blur-md shadow-md transition-all cursor-pointer touch-manipulation active:scale-90 ${
                 inWish
                   ? 'bg-rose-50 text-rose-500'
                   : 'bg-white/90 text-slate-600 hover:text-rose-500'
               }`}
               title={t('addToWishlist')}
+              aria-label={t('addToWishlist')}
             >
               <Heart className={`w-5 h-5 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`} />
             </button>
@@ -137,11 +138,12 @@ export const ProductDetailScreen: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => setActiveImageIndex(idx)}
-                className={`w-20 h-20 rounded-xl bg-white border-2 p-1.5 shrink-0 transition-all cursor-pointer overflow-hidden ${
+                className={`min-w-[64px] min-h-[64px] w-20 h-20 rounded-xl bg-white border-2 p-1.5 shrink-0 transition-all cursor-pointer overflow-hidden touch-manipulation active:scale-95 ${
                   activeImageIndex === idx
                     ? 'border-blue-600 shadow-sm scale-102'
                     : 'border-slate-200 hover:border-slate-300 opacity-70 hover:opacity-100'
                 }`}
+                aria-label={`Select product image ${idx + 1}`}
               >
                 <img
                   src={img}
@@ -256,21 +258,21 @@ export const ProductDetailScreen: React.FC = () => {
                   {selectedColor?.name[language]}
                 </span>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {product.variants.colors.map((color) => {
                   const isSelected = selectedColor?.id === color.id;
                   return (
                     <button
                       key={color.id}
                       onClick={() => setSelectedColor(color)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      className={`min-h-[44px] flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer touch-manipulation active:scale-95 ${
                         isSelected
                           ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-xs'
                           : 'border-slate-200 hover:border-slate-300 text-slate-700'
                       }`}
                     >
                       <span
-                        className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-2xs"
+                        className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs"
                         style={{ backgroundColor: color.colorHex }}
                       />
                       <span>{color.name[language]}</span>
@@ -297,7 +299,7 @@ export const ProductDetailScreen: React.FC = () => {
                     <button
                       key={storage.id}
                       onClick={() => setSelectedStorage(storage)}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
+                      className={`min-h-[48px] py-2 px-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer touch-manipulation active:scale-95 ${
                         isSelected
                           ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
                           : 'border-slate-200 hover:border-slate-300 text-slate-800'
@@ -324,17 +326,19 @@ export const ProductDetailScreen: React.FC = () => {
           {/* Quantity and Actions */}
           <div className="space-y-4 pt-4 border-t border-slate-100">
             <div className="flex items-center gap-4">
-              <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
+              <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-0.5">
                 <button
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="p-2 hover:bg-white rounded-lg text-slate-700 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white rounded-lg text-slate-700 cursor-pointer touch-manipulation active:scale-90"
+                  aria-label="Decrease quantity"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="px-4 text-sm font-bold text-slate-900">{quantity}</span>
+                <span className="px-4 text-sm font-bold text-slate-900 min-w-[32px] text-center">{quantity}</span>
                 <button
                   onClick={() => setQuantity((q) => Math.min(product.stockCount, q + 1))}
-                  className="p-2 hover:bg-white rounded-lg text-slate-700 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white rounded-lg text-slate-700 cursor-pointer touch-manipulation active:scale-90"
+                  aria-label="Increase quantity"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -353,7 +357,7 @@ export const ProductDetailScreen: React.FC = () => {
               <button
                 id="pdp-add-to-cart-btn"
                 onClick={handleAddToCart}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 active:bg-black text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer touch-manipulation active:scale-95"
               >
                 {addedAnimation ? (
                   <>
@@ -371,7 +375,7 @@ export const ProductDetailScreen: React.FC = () => {
               <button
                 id="pdp-buy-now-btn"
                 onClick={handleBuyNow}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                className="w-full min-h-[48px] bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer touch-manipulation active:scale-95"
               >
                 <Zap className="w-4 h-4 fill-white" />
                 <span>{t('buyNow')}</span>

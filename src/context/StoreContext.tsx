@@ -80,11 +80,30 @@ const initialFilterState: FilterState = {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('en');
+  // Read initial URL parameters if present
+  const initialParams = useMemo(() => {
+    if (typeof window === 'undefined') return { screen: 'home', lang: 'en', store: 'voltix', product: 'prod-iphone-16-pro-max', category: 'all' };
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = params.get('screen') as Screen | null;
+    const langParam = params.get('lang') as Language | null;
+    const storeParam = params.get('store') as StoreId | null;
+    const productParam = params.get('product');
+    const categoryParam = params.get('category');
+
+    return {
+      screen: screenParam && ['home', 'plp', 'pdp', 'checkout', 'order-confirmation'].includes(screenParam) ? screenParam : 'home',
+      lang: langParam && ['en', 'ar'].includes(langParam) ? langParam : 'en',
+      store: storeParam && ['voltix', 'apex', 'lumina'].includes(storeParam) ? storeParam : 'voltix',
+      product: productParam || 'prod-iphone-16-pro-max',
+      category: categoryParam || 'all',
+    };
+  }, []);
+
+  const [language, setLanguageState] = useState<Language>(initialParams.lang as Language);
   const [currency, setCurrency] = useState<Currency>('AED');
-  const [activeStore, setActiveStore] = useState<StoreId>('voltix');
-  const [activeScreen, setActiveScreen] = useState<Screen>('home');
-  const [selectedProductId, setSelectedProductId] = useState<string>('prod-iphone-16-pro-max');
+  const [activeStore, setActiveStore] = useState<StoreId>(initialParams.store as StoreId);
+  const [activeScreen, setActiveScreen] = useState<Screen>(initialParams.screen as Screen);
+  const [selectedProductId, setSelectedProductId] = useState<string>(initialParams.product);
   const [cart, setCart] = useState<CartItem[]>([
     {
       id: 'prod-iphone-16-pro-max_c-nat_s-512',
@@ -101,9 +120,77 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterState, setFilterState] = useState<FilterState>(initialFilterState);
+  const [filterState, setFilterState] = useState<FilterState>({
+    ...initialFilterState,
+    category: initialParams.category,
+  });
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPercent: number } | null>(null);
   const [confirmedOrder, setConfirmedOrder] = useState<OrderDetails | null>(null);
+
+  // Sync state to URL for dynamic route indexing and deep linking
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams();
+
+    if (activeScreen !== 'home') {
+      params.set('screen', activeScreen);
+    }
+    if (activeScreen === 'pdp' && selectedProductId) {
+      params.set('product', selectedProductId);
+    }
+    if (activeScreen === 'plp' && filterState.category !== 'all') {
+      params.set('category', filterState.category);
+    }
+    if (activeStore !== 'voltix') {
+      params.set('store', activeStore);
+    }
+    if (language !== 'en') {
+      params.set('lang', language);
+    }
+
+    const newQuery = params.toString();
+    const newRelativePath = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
+    
+    // Only update if search changed
+    if (window.location.search !== (newQuery ? `?${newQuery}` : '')) {
+      window.history.replaceState({ screen: activeScreen, selectedProductId, category: filterState.category }, '', newRelativePath);
+    }
+  }, [activeScreen, selectedProductId, filterState.category, activeStore, language]);
+
+  // Handle browser Back / Forward buttons
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const screenParam = params.get('screen') as Screen | null;
+      const langParam = params.get('lang') as Language | null;
+      const storeParam = params.get('store') as StoreId | null;
+      const productParam = params.get('product');
+      const categoryParam = params.get('category');
+
+      if (screenParam && ['home', 'plp', 'pdp', 'checkout', 'order-confirmation'].includes(screenParam)) {
+        setActiveScreen(screenParam);
+      } else {
+        setActiveScreen('home');
+      }
+
+      if (productParam) {
+        setSelectedProductId(productParam);
+      }
+      if (categoryParam) {
+        setFilterState((prev) => ({ ...prev, category: categoryParam }));
+      }
+      if (storeParam && ['voltix', 'apex', 'lumina'].includes(storeParam)) {
+        setActiveStore(storeParam);
+      }
+      if (langParam && ['en', 'ar'].includes(langParam)) {
+        setLanguageState(langParam);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Sync HTML dir and lang attributes
   const setLanguage = (lang: Language) => {

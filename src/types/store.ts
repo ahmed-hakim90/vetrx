@@ -1,6 +1,6 @@
 export type Language = 'en' | 'ar';
 export type Currency = 'AED' | 'SAR' | 'USD';
-export type Screen = 'home' | 'plp' | 'pdp' | 'checkout';
+export type Screen = 'home' | 'plp' | 'pdp' | 'checkout' | 'order-confirmation';
 export type StoreId = 'voltix' | 'apex' | 'lumina';
 
 export interface LocalizedString {

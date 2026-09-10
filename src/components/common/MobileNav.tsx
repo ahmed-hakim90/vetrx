@@ -20,7 +20,7 @@ export const MobileNav: React.FC = () => {
       <button
         id="mobile-nav-home"
         onClick={() => setActiveScreen('home')}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-90 ${
           activeScreen === 'home' && !isWishlistOpen && !isCartOpen
             ? 'text-blue-600 font-black'
             : 'text-slate-500 hover:text-slate-800'
@@ -33,7 +33,7 @@ export const MobileNav: React.FC = () => {
       <button
         id="mobile-nav-plp"
         onClick={() => setActiveScreen('plp')}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-90 ${
           activeScreen === 'plp' && !isWishlistOpen && !isCartOpen
             ? 'text-blue-600 font-black'
             : 'text-slate-500 hover:text-slate-800'
@@ -46,7 +46,7 @@ export const MobileNav: React.FC = () => {
       <button
         id="mobile-nav-wishlist"
         onClick={() => setIsWishlistOpen(true)}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer relative ${
+        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer relative touch-manipulation active:scale-90 ${
           isWishlistOpen
             ? 'text-rose-600 font-black'
             : 'text-slate-500 hover:text-slate-800'
@@ -66,7 +66,7 @@ export const MobileNav: React.FC = () => {
       <button
         id="mobile-nav-cart"
         onClick={() => setIsCartOpen(true)}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer relative ${
+        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer relative touch-manipulation active:scale-90 ${
           isCartOpen
             ? 'text-blue-600 font-black'
             : 'text-slate-500 hover:text-slate-800'
@@ -86,7 +86,7 @@ export const MobileNav: React.FC = () => {
       <button
         id="mobile-nav-checkout"
         onClick={() => setActiveScreen('checkout')}
-        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center min-h-[44px] min-w-[54px] py-1 px-2 rounded-xl transition-colors cursor-pointer touch-manipulation active:scale-90 ${
           activeScreen === 'checkout'
             ? 'text-blue-600 font-black'
             : 'text-slate-500 hover:text-slate-800'

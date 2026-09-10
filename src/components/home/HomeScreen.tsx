@@ -26,6 +26,12 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { PRODUCTS, CATEGORIES, BRAND_LOGOS } from '../../data/mockData';
 import { Product } from '../../types/store';
+import {
+  HeroBannerSkeleton,
+  CategoryGridSkeleton,
+  FlashDealSkeleton,
+  ProductGridSkeleton,
+} from '../feedback';
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -43,8 +49,18 @@ export const HomeScreen: React.FC = () => {
     setActiveScreen,
   } = useStore();
 
+  const [isHydrating, setIsHydrating] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'bestseller' | 'new' | 'sale'>('all');
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+
+  // Initial state hydration simulation to demonstrate improved perceived performance
+  useEffect(() => {
+    setIsHydrating(true);
+    const timer = setTimeout(() => {
+      setIsHydrating(false);
+    }, 650);
+    return () => clearTimeout(timer);
+  }, [activeStore]);
 
   // Live countdown timer for Deal of the Day (hours, minutes, seconds)
   const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 18 });
@@ -108,91 +124,95 @@ export const HomeScreen: React.FC = () => {
   return (
     <div className="space-y-12 pb-16">
       {/* 1. Hero Showcase Banner */}
-      <section className="relative overflow-hidden bg-slate-950 text-white rounded-2xl mx-4 lg:mx-auto max-w-7xl mt-4 border border-slate-800 shadow-xl">
-        {/* Glow background elements */}
-        <div
-          className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-30 pointer-events-none"
-          style={{ backgroundColor: currentStoreConfig.primaryColor }}
-        />
-        <div
-          className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl opacity-20 pointer-events-none"
-          style={{ backgroundColor: currentStoreConfig.accentColor }}
-        />
+      {isHydrating ? (
+        <HeroBannerSkeleton />
+      ) : (
+        <section className="relative overflow-hidden bg-slate-950 text-white rounded-2xl mx-4 lg:mx-auto max-w-7xl mt-4 border border-slate-800 shadow-xl">
+          {/* Glow background elements */}
+          <div
+            className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-30 pointer-events-none"
+            style={{ backgroundColor: currentStoreConfig.primaryColor }}
+          />
+          <div
+            className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl opacity-20 pointer-events-none"
+            style={{ backgroundColor: currentStoreConfig.accentColor }}
+          />
 
-        <div className="relative max-w-7xl mx-auto px-6 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Text Content */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-              <span>{t('heroBadge')}</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
-              {t('heroTitle')}
-            </h1>
-
-            <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed font-normal">
-              {t('heroSubtitle')}
-            </p>
-
-            {/* Quick Tech Specs Stats */}
-            <div className="grid grid-cols-3 gap-3 pt-2 max-w-md">
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                <div className="text-base sm:text-lg font-black text-white">{t('heroStat1')}</div>
-                <div className="text-[11px] text-slate-400">{t('heroStat1Label')}</div>
+          <div className="relative max-w-7xl mx-auto px-6 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Text Content */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wide uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                <span>{t('heroBadge')}</span>
               </div>
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                <div className="text-base sm:text-lg font-black text-blue-400">{t('heroStat2')}</div>
-                <div className="text-[11px] text-slate-400">{t('heroStat2Label')}</div>
-              </div>
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
-                <div className="text-base sm:text-lg font-black text-amber-400">{t('heroStat3')}</div>
-                <div className="text-[11px] text-slate-400">{t('heroStat3Label')}</div>
-              </div>
-            </div>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                id="hero-cta-shop-now"
-                onClick={() => navigateToCategory('all')}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer group"
-              >
-                <span>{t('heroCtaPrimary')}</span>
-                <ArrowIcon className="w-4 h-4 transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
-              </button>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
+                {t('heroTitle')}
+              </h1>
 
-              <button
-                id="hero-cta-explore-specs"
-                onClick={() => navigateToProduct('prod-iphone-16-pro-max')}
-                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition-all cursor-pointer"
-              >
-                {t('heroCtaSecondary')}
-              </button>
-            </div>
-          </div>
+              <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed font-normal">
+                {t('heroSubtitle')}
+              </p>
 
-          {/* Hero Image Showcase */}
-          <div className="lg:col-span-5 flex justify-center relative">
-            <div className="relative group cursor-pointer" onClick={() => navigateToProduct('prod-iphone-16-pro-max')}>
-              <img
-                src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&q=85"
-                alt="Voltix Flagship Phone"
-                className="w-full max-w-sm rounded-2xl shadow-2xl object-cover border border-slate-700/60 transform transition-transform group-hover:scale-103 duration-300"
-              />
-              <div className="absolute -bottom-4 -left-4 rtl:-left-auto rtl:-right-4 bg-white/95 backdrop-blur-md text-slate-950 p-3 rounded-xl shadow-xl border border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black">
-                  <Zap className="w-5 h-5 fill-white" />
+              {/* Quick Tech Specs Stats */}
+              <div className="grid grid-cols-3 gap-3 pt-2 max-w-md">
+                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
+                  <div className="text-base sm:text-lg font-black text-white">{t('heroStat1')}</div>
+                  <div className="text-[11px] text-slate-400">{t('heroStat1Label')}</div>
                 </div>
-                <div>
-                  <div className="text-[10px] text-slate-500 font-bold uppercase">Official GCC Stock</div>
-                  <div className="text-xs font-black text-slate-900">Apple iPhone 16 Pro Max</div>
+                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
+                  <div className="text-base sm:text-lg font-black text-blue-400">{t('heroStat2')}</div>
+                  <div className="text-[11px] text-slate-400">{t('heroStat2Label')}</div>
+                </div>
+                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 sm:p-3 text-center">
+                  <div className="text-base sm:text-lg font-black text-amber-400">{t('heroStat3')}</div>
+                  <div className="text-[11px] text-slate-400">{t('heroStat3Label')}</div>
                 </div>
               </div>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  id="hero-cta-shop-now"
+                  onClick={() => navigateToCategory('all')}
+                  className="min-h-[44px] bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer group touch-manipulation active:scale-95"
+                >
+                  <span>{t('heroCtaPrimary')}</span>
+                  <ArrowIcon className="w-4 h-4 transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
+                </button>
+
+                <button
+                  id="hero-cta-explore-specs"
+                  onClick={() => navigateToProduct('prod-iphone-16-pro-max')}
+                  className="min-h-[44px] bg-slate-900/90 hover:bg-slate-800 active:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all cursor-pointer flex items-center touch-manipulation active:scale-95"
+                >
+                  {t('heroCtaSecondary')}
+                </button>
+              </div>
+            </div>
+
+            {/* Hero Image Showcase */}
+            <div className="lg:col-span-5 flex justify-center relative">
+              <div className="relative group cursor-pointer" onClick={() => navigateToProduct('prod-iphone-16-pro-max')}>
+                <img
+                  src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&q=85"
+                  alt="Voltix Flagship Phone"
+                  className="w-full max-w-sm rounded-2xl shadow-2xl object-cover border border-slate-700/60 transform transition-transform group-hover:scale-103 duration-300"
+                />
+                <div className="absolute -bottom-4 -left-4 rtl:-left-auto rtl:-right-4 bg-white/95 backdrop-blur-md text-slate-950 p-3 rounded-xl shadow-xl border border-slate-200 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black">
+                    <Zap className="w-5 h-5 fill-white" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Official GCC Stock</div>
+                    <div className="text-xs font-black text-slate-900">Apple iPhone 16 Pro Max</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 2. Value Proposition Strip */}
       <section className="max-w-7xl mx-auto px-4">
@@ -240,156 +260,164 @@ export const HomeScreen: React.FC = () => {
       </section>
 
       {/* 3. Flash Deal of the Day */}
-      {flashDealProduct && (
-        <section className="max-w-7xl mx-auto px-4">
-          <div className="bg-gradient-to-r from-rose-900 via-rose-950 to-slate-950 text-white rounded-2xl p-6 sm:p-8 border border-rose-800/60 shadow-lg">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              {/* Left Countdown & Info */}
-              <div className="space-y-4 max-w-xl text-center md:text-start">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-black border border-rose-500/30">
-                  <Flame className="w-4 h-4 fill-rose-400 text-rose-400 animate-pulse" />
-                  <span>{t('flashDealsTitle')}</span>
-                </div>
-
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                  {flashDealProduct.title[language]}
-                </h2>
-
-                <p className="text-xs sm:text-sm text-slate-300 line-clamp-2">
-                  {flashDealProduct.description[language]}
-                </p>
-
-                {/* Countdown Timer */}
-                <div className="flex items-center justify-center md:justify-start gap-2 pt-2">
-                  <span className="text-xs text-rose-200 font-semibold flex items-center gap-1.5 mr-2">
-                    <Clock className="w-4 h-4 text-rose-300" />
-                    {t('endsIn')}:
-                  </span>
-                  <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
-                    <span className="text-base font-black text-rose-300">
-                      {String(timeLeft.hours).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] block text-slate-400">{t('hours')}</span>
+      {isHydrating ? (
+        <FlashDealSkeleton />
+      ) : (
+        flashDealProduct && (
+          <section className="max-w-7xl mx-auto px-4">
+            <div className="bg-gradient-to-r from-rose-900 via-rose-950 to-slate-950 text-white rounded-2xl p-6 sm:p-8 border border-rose-800/60 shadow-lg">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                {/* Left Countdown & Info */}
+                <div className="space-y-4 max-w-xl text-center md:text-start">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-black border border-rose-500/30">
+                    <Flame className="w-4 h-4 fill-rose-400 text-rose-400 animate-pulse" />
+                    <span>{t('flashDealsTitle')}</span>
                   </div>
-                  <span className="text-rose-400 font-bold">:</span>
-                  <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
-                    <span className="text-base font-black text-rose-300">
-                      {String(timeLeft.minutes).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] block text-slate-400">{t('minutes')}</span>
-                  </div>
-                  <span className="text-rose-400 font-bold">:</span>
-                  <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
-                    <span className="text-base font-black text-rose-300">
-                      {String(timeLeft.seconds).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] block text-slate-400">{t('seconds')}</span>
-                  </div>
-                </div>
 
-                {/* Sold percentage bar */}
-                <div className="space-y-1.5 max-w-sm pt-1">
-                  <div className="flex justify-between text-[11px] text-rose-200">
-                    <span>
-                      {flashDealProduct.flashDealSoldPercentage || 78}% {t('sold')}
-                    </span>
-                    <span>
-                      {t('hurryOnly')} {flashDealProduct.stockCount} {t('itemsLeft')}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-rose-800/60">
-                    <div
-                      className="bg-rose-500 h-full rounded-full"
-                      style={{ width: `${flashDealProduct.flashDealSoldPercentage || 78}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    {flashDealProduct.title[language]}
+                  </h2>
 
-              {/* Right Product Spotlight & Quick Buy */}
-              <div className="bg-white text-slate-900 rounded-xl p-5 shadow-2xl max-w-xs w-full text-center space-y-3">
-                <img
-                  src={flashDealProduct.images[0]}
-                  alt={flashDealProduct.title[language]}
-                  className="w-48 h-48 mx-auto rounded-lg object-cover"
-                />
-                <div>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-2xl font-black text-slate-900">
-                      {formatPrice(flashDealProduct.price)}
+                  <p className="text-xs sm:text-sm text-slate-300 line-clamp-2">
+                    {flashDealProduct.description[language]}
+                  </p>
+
+                  {/* Countdown Timer */}
+                  <div className="flex items-center justify-center md:justify-start gap-2 pt-2">
+                    <span className="text-xs text-rose-200 font-semibold flex items-center gap-1.5 mr-2">
+                      <Clock className="w-4 h-4 text-rose-300" />
+                      {t('endsIn')}:
                     </span>
-                    {flashDealProduct.originalPrice && (
-                      <span className="text-sm line-through text-slate-400 font-medium">
-                        {formatPrice(flashDealProduct.originalPrice)}
+                    <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
+                      <span className="text-base font-black text-rose-300">
+                        {String(timeLeft.hours).padStart(2, '0')}
                       </span>
-                    )}
+                      <span className="text-[9px] block text-slate-400">{t('hours')}</span>
+                    </div>
+                    <span className="text-rose-400 font-bold">:</span>
+                    <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
+                      <span className="text-base font-black text-rose-300">
+                        {String(timeLeft.minutes).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] block text-slate-400">{t('minutes')}</span>
+                    </div>
+                    <span className="text-rose-400 font-bold">:</span>
+                    <div className="bg-slate-900/90 border border-rose-500/30 px-3 py-1.5 rounded-lg text-center">
+                      <span className="text-base font-black text-rose-300">
+                        {String(timeLeft.seconds).padStart(2, '0')}
+                      </span>
+                      <span className="text-[9px] block text-slate-400">{t('seconds')}</span>
+                    </div>
                   </div>
-                  <div className="text-[11px] font-bold text-rose-600 mt-0.5">
-                    {flashDealProduct.badge?.text[language]}
+
+                  {/* Sold percentage bar */}
+                  <div className="space-y-1.5 max-w-sm pt-1">
+                    <div className="flex justify-between text-[11px] text-rose-200">
+                      <span>
+                        {flashDealProduct.flashDealSoldPercentage || 78}% {t('sold')}
+                      </span>
+                      <span>
+                        {t('hurryOnly')} {flashDealProduct.stockCount} {t('itemsLeft')}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-rose-800/60">
+                      <div
+                        className="bg-rose-500 h-full rounded-full"
+                        style={{ width: `${flashDealProduct.flashDealSoldPercentage || 78}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  id="flash-deal-claim-btn"
-                  onClick={(e) => handleQuickAdd(flashDealProduct, e)}
-                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>
-                    {addedProductId === flashDealProduct.id
-                      ? t('addedToCart')
-                      : t('addToCart')}
-                  </span>
-                </button>
+                {/* Right Product Spotlight & Quick Buy */}
+                <div className="bg-white text-slate-900 rounded-xl p-5 shadow-2xl max-w-xs w-full text-center space-y-3">
+                  <img
+                    src={flashDealProduct.images[0]}
+                    alt={flashDealProduct.title[language]}
+                    className="w-48 h-48 mx-auto rounded-lg object-cover"
+                  />
+                  <div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl font-black text-slate-900">
+                        {formatPrice(flashDealProduct.price)}
+                      </span>
+                      {flashDealProduct.originalPrice && (
+                        <span className="text-sm line-through text-slate-400 font-medium">
+                          {formatPrice(flashDealProduct.originalPrice)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] font-bold text-rose-600 mt-0.5">
+                      {flashDealProduct.badge?.text[language]}
+                    </div>
+                  </div>
+
+                  <button
+                    id="flash-deal-claim-btn"
+                    onClick={(e) => handleQuickAdd(flashDealProduct, e)}
+                    className="w-full min-h-[44px] bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer touch-manipulation active:scale-95"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>
+                      {addedProductId === flashDealProduct.id
+                        ? t('addedToCart')
+                        : t('addToCart')}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )
       )}
 
       {/* 4. Shop by Category Grid */}
-      <section className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {t('shopByCategory')}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500">
-              {t('exploreCategorySubtitle')}
-            </p>
+      {isHydrating ? (
+        <CategoryGridSkeleton />
+      ) : (
+        <section className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {t('shopByCategory')}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500">
+                {t('exploreCategorySubtitle')}
+              </p>
+            </div>
+            <button
+              onClick={() => navigateToCategory('all')}
+              className="min-h-[44px] px-3 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer touch-manipulation"
+            >
+              <span>{t('viewAllCategories')}</span>
+              <ArrowIcon className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <button
-            onClick={() => navigateToCategory('all')}
-            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-          >
-            <span>{t('viewAllCategories')}</span>
-            <ArrowIcon className="w-3.5 h-3.5" />
-          </button>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {CATEGORIES.map((cat) => {
-            const IconComponent = getCategoryIcon(cat.icon);
-            return (
-              <button
-                key={cat.id}
-                onClick={() => navigateToCategory(cat.id)}
-                className="group p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all text-center flex flex-col items-center cursor-pointer shadow-2xs"
-              >
-                <div className="w-12 h-12 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-600 flex items-center justify-center mb-3 transition-colors">
-                  <IconComponent className="w-6 h-6" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                  {cat.name[language]}
-                </h4>
-                <span className="text-[10px] text-slate-500 mt-1">
-                  {cat.count} {t('items')}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+            {CATEGORIES.map((cat) => {
+              const IconComponent = getCategoryIcon(cat.icon);
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => navigateToCategory(cat.id)}
+                  className="group min-h-[96px] p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md active:scale-95 transition-all text-center flex flex-col items-center justify-center cursor-pointer shadow-2xs touch-manipulation"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-600 flex items-center justify-center mb-2.5 transition-colors">
+                    <IconComponent className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                    {cat.name[language]}
+                  </h4>
+                  <span className="text-[10px] text-slate-500 mt-0.5">
+                    {cat.count} {t('items')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* 5. Featured Electronics with Filter Tabs */}
       <section className="max-w-7xl mx-auto px-4">
@@ -401,10 +429,10 @@ export const HomeScreen: React.FC = () => {
           </div>
 
           {/* Interactive filter tabs */}
-          <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+          <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`min-h-[40px] sm:min-h-[34px] px-3.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer touch-manipulation active:scale-95 flex-1 sm:flex-none text-center ${
                 activeTab === 'all'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -414,7 +442,7 @@ export const HomeScreen: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('bestseller')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`min-h-[40px] sm:min-h-[34px] px-3.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer touch-manipulation active:scale-95 flex-1 sm:flex-none text-center ${
                 activeTab === 'bestseller'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -424,7 +452,7 @@ export const HomeScreen: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('new')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`min-h-[40px] sm:min-h-[34px] px-3.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer touch-manipulation active:scale-95 flex-1 sm:flex-none text-center ${
                 activeTab === 'new'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -434,7 +462,7 @@ export const HomeScreen: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('sale')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`min-h-[40px] sm:min-h-[34px] px-3.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer touch-manipulation active:scale-95 flex-1 sm:flex-none text-center ${
                 activeTab === 'sale'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -446,122 +474,129 @@ export const HomeScreen: React.FC = () => {
         </div>
 
         {/* Product Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {displayedProducts.map((product) => {
-            const inWish = isInWishlist(product.id);
-            return (
-              <div
-                key={product.id}
-                onClick={() => navigateToProduct(product.id)}
-                className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all flex flex-col justify-between overflow-hidden cursor-pointer"
-              >
-                {/* Image Container with Badges & Wishlist */}
-                <div className="relative bg-slate-50 p-4 aspect-square flex items-center justify-center overflow-hidden">
-                  <img
-                    src={product.images[0]}
-                    alt={product.title[language]}
-                    className="w-full h-full object-contain transform transition-transform duration-300 group-hover:scale-105"
-                  />
+        {isHydrating ? (
+          <ProductGridSkeleton count={4} columns={4} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {displayedProducts.map((product) => {
+              const inWish = isInWishlist(product.id);
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => navigateToProduct(product.id)}
+                  className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all flex flex-col justify-between overflow-hidden cursor-pointer shadow-2xs"
+                >
+                  {/* Image Container with Badges & Wishlist */}
+                  <div className="relative bg-slate-50 p-4 aspect-square flex items-center justify-center overflow-hidden">
+                    <img
+                      src={product.images[0]}
+                      alt={product.title[language]}
+                      className="w-full h-full object-contain transform transition-transform duration-300 group-hover:scale-105"
+                    />
 
-                  {/* Badge */}
-                  {product.badge && (
-                    <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-xs">
-                      {product.badge.text[language]}
-                    </span>
-                  )}
-
-                  {/* Action buttons (Wishlist & Quick View) */}
-                  <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3 flex flex-col gap-1.5 z-10">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist(product.id);
-                      }}
-                      className={`p-2 rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs ${
-                        inWish
-                          ? 'bg-rose-50 text-rose-500'
-                          : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
-                      }`}
-                      title={t('addToWishlist')}
-                    >
-                      <Heart
-                        className={`w-3.5 h-3.5 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
-                      />
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setQuickViewProductId(product.id);
-                      }}
-                      className="p-2 rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs"
-                      title={t('quickView')}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                      <span className="font-bold uppercase tracking-wider">{product.brand}</span>
-                      <div className="flex items-center gap-1 text-amber-500 font-bold">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span>{product.rating}</span>
-                        <span className="text-slate-400">({product.reviewCount})</span>
-                      </div>
-                    </div>
-
-                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
-                      {product.title[language]}
-                    </h4>
-
-                    {/* Short specs pill */}
-                    {product.shortSpecs?.[0] && (
-                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                        {product.shortSpecs[0][language]}
-                      </p>
+                    {/* Badge */}
+                    {product.badge && (
+                      <span className="absolute top-3 left-3 rtl:left-auto rtl:right-3 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-xs">
+                        {product.badge.text[language]}
+                      </span>
                     )}
+
+                    {/* Action buttons (Wishlist & Quick View - min 44px touch targets) */}
+                    <div className="absolute top-2.5 right-2.5 rtl:right-auto rtl:left-2.5 flex flex-col gap-1.5 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWishlist(product.id);
+                        }}
+                        className={`min-w-[44px] min-h-[44px] rounded-full backdrop-blur-xs transition-all cursor-pointer shadow-xs flex items-center justify-center touch-manipulation active:scale-90 ${
+                          inWish
+                            ? 'bg-rose-50 text-rose-500'
+                            : 'bg-white/90 text-slate-600 hover:text-rose-500 hover:bg-white'
+                        }`}
+                        title={t('addToWishlist')}
+                        aria-label={t('addToWishlist')}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${inWish ? 'fill-rose-500 text-rose-500' : ''}`}
+                        />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setQuickViewProductId(product.id);
+                        }}
+                        className="min-w-[44px] min-h-[44px] rounded-full bg-white/90 text-slate-600 hover:text-blue-600 hover:bg-white backdrop-blur-xs transition-all cursor-pointer shadow-xs flex items-center justify-center touch-manipulation active:scale-90"
+                        title={t('quickView')}
+                        aria-label={t('quickView')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Price & Action */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  {/* Content */}
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-base font-black text-slate-900">
-                        {formatPrice(product.price)}
-                      </div>
-                      {product.originalPrice && (
-                        <div className="text-[11px] text-slate-400 line-through">
-                          {formatPrice(product.originalPrice)}
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                        <span className="font-bold uppercase tracking-wider">{product.brand}</span>
+                        <div className="flex items-center gap-1 text-amber-500 font-bold">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>{product.rating}</span>
+                          <span className="text-slate-400">({product.reviewCount})</span>
                         </div>
+                      </div>
+
+                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                        {product.title[language]}
+                      </h4>
+
+                      {/* Short specs pill */}
+                      {product.shortSpecs?.[0] && (
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                          {product.shortSpecs[0][language]}
+                        </p>
                       )}
                     </div>
 
-                    <button
-                      onClick={(e) => handleQuickAdd(product, e)}
-                      className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-xs cursor-pointer flex items-center justify-center"
-                      title={t('addToCart')}
-                    >
-                      {addedProductId === product.id ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <ShoppingCart className="w-4 h-4" />
-                      )}
-                    </button>
+                    {/* Price & Action (min 44px touch target) */}
+                    <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-base font-black text-slate-900">
+                          {formatPrice(product.price)}
+                        </div>
+                        {product.originalPrice && (
+                          <div className="text-[11px] text-slate-400 line-through">
+                            {formatPrice(product.originalPrice)}
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => handleQuickAdd(product, e)}
+                        className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white transition-all shadow-xs cursor-pointer flex items-center justify-center touch-manipulation active:scale-95"
+                        title={t('addToCart')}
+                        aria-label={t('addToCart')}
+                      >
+                        {addedProductId === product.id ? (
+                          <Check className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <ShoppingCart className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* View All Button */}
         <div className="text-center pt-8">
           <button
             onClick={() => navigateToCategory('all')}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+            className="min-h-[44px] inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 font-bold text-xs transition-colors cursor-pointer touch-manipulation active:scale-95"
           >
             <span>{t('viewMore')}</span>
             <ArrowIcon className="w-4 h-4" />
