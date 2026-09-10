@@ -17,6 +17,8 @@ import { activeClient } from '../config/active-client';
 import { ClientConfig } from '../config/clients/schema';
 import { readClientStorage, writeClientStorage } from '../core/storage/clientStorage';
 import { getDemoProductsForClient, getDemoCategoriesForClient } from '../core/commerce/demoCatalog';
+import { StoreApiClient } from '../wordpress/integration/store-api-client.mjs';
+import { WooCommerceCatalogProvider } from '../core/catalog/WooCommerceCatalogProvider';
 
 export type TranslationKey = keyof typeof translations.en;
 
@@ -128,10 +130,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [language]);
 
-  // Products/categories come from the CommerceProvider's demo catalog for
-  // this client only — no component imports mockData/demo data directly.
-  const clientProducts = useMemo(() => getDemoProductsForClient(activeClient.id), []);
-  const clientCategories = useMemo(() => getDemoCategoriesForClient(activeClient.id), []);
+  // Products/categories come from either the demo catalog (mock) or WooCommerce Live Provider
+  const [clientProducts, setClientProducts] = useState<Product[]>(() =>
+    activeClient.commerce.provider === 'mock' ? getDemoProductsForClient(activeClient.id) : []
+  );
+  const [clientCategories, setClientCategories] = useState<Category[]>(() =>
+    activeClient.commerce.provider === 'mock' ? getDemoCategoriesForClient(activeClient.id) : []
+  );
+
+  // If using WooCommerce Live, load data from plugin
+  useEffect(() => {
+    if (activeClient.commerce.provider === 'woocommerce') {
+      const loadWooCommerceData = async () => {
+        try {
+          const wordpressUrl = process.env.VITE_WORDPRESS_URL || 'http://localhost:8080';
+          const client = new StoreApiClient(wordpressUrl);
+          await client.connect();
+          const catalogProvider = new WooCommerceCatalogProvider(client);
+
+          const categories = await catalogProvider.getCategories(activeClient.id);
+          setClientCategories(categories);
+
+          const result = await catalogProvider.queryCatalog(activeClient.id, {
+            page: 1,
+            perPage: 1000,
+          });
+          setClientProducts(result.products);
+        } catch (error) {
+          console.error('Failed to load WooCommerce data:', error);
+          // Fall back to demo data on error
+          setClientProducts(getDemoProductsForClient(activeClient.id));
+          setClientCategories(getDemoCategoriesForClient(activeClient.id));
+        }
+      };
+      loadWooCommerceData();
+    }
+  }, [activeClient.id, activeClient.commerce.provider]);
 
   // A product "slug" is just its id today (see README — real slugs would
   // come from a real CommerceProvider). No fallback to another product: an
