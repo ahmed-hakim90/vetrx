@@ -184,7 +184,7 @@ const ProductDetailContent: React.FC<{ product: Product }> = ({ product }) => {
               )}
               <div className={`flex items-center gap-1.5 font-bold ${product.inStock ? 'text-emerald-600' : 'text-rose-600'}`}>
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{product.inStock ? `${t('inStock')} (${product.stockCount} left)` : t('outOfStock')}</span>
+                <span>{product.inStock ? `${t('inStock')}${product.stockQuantityKnown === false ? '' : ` (${product.stockCount} ${language === 'ar' ? 'متبقي' : 'left'})`}` : t('outOfStock')}</span>
               </div>
             </div>
           </div>
@@ -290,8 +290,8 @@ const ProductDetailContent: React.FC<{ product: Product }> = ({ product }) => {
                 </button>
                 <span className="px-4 text-sm font-bold text-slate-900 min-w-[32px] text-center">{quantity}</span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(product.stockCount, q + 1))}
-                  disabled={quantity >= product.stockCount}
+                  onClick={() => setQuantity((q) => product.stockQuantityKnown === false ? q + 1 : Math.min(product.stockCount, q + 1))}
+                  disabled={!product.inStock || (product.stockQuantityKnown !== false && quantity >= product.stockCount)}
                   className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white rounded-lg text-slate-700 disabled:opacity-40 cursor-pointer touch-manipulation active:scale-90"
                   aria-label="Increase quantity"
                 >

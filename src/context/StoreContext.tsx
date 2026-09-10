@@ -18,6 +18,7 @@ import { ClientConfig } from '../config/clients/schema';
 import { readClientStorage, writeClientStorage } from '../core/storage/clientStorage';
 import { getDemoProductsForClient, getDemoCategoriesForClient } from '../core/commerce/demoCatalog';
 import { WooCommerceCatalogProvider } from '../core/catalog/WooCommerceCatalogProvider';
+import { loadLiveCatalog, resolveCatalogUrl } from '../core/catalog/loadLiveCatalog';
 
 export type TranslationKey = keyof typeof translations.en;
 
@@ -29,6 +30,9 @@ interface StoreContextType {
   client: ClientConfig;
   products: Product[];
   categories: Category[];
+  catalogLoading: boolean;
+  catalogError: string | null;
+  retryCatalog: () => void;
   getProductBySlug: (slug: string) => Product | undefined;
   cart: CartItem[];
   addToCart: (
@@ -129,46 +133,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [language]);
 
-  // Products/categories always start with demo data (fallback/default)
+  const isLive = activeClient.commerce.provider !== 'mock';
   const [clientProducts, setClientProducts] = useState<Product[]>(() =>
-    getDemoProductsForClient(activeClient.id)
+    isLive ? [] : getDemoProductsForClient(activeClient.id)
   );
   const [clientCategories, setClientCategories] = useState<Category[]>(() =>
-    getDemoCategoriesForClient(activeClient.id)
+    isLive ? [] : getDemoCategoriesForClient(activeClient.id)
   );
+  const [catalogLoading, setCatalogLoading] = useState(isLive);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
 
-  // If using WooCommerce Live, try to load live data (but keep demo as fallback)
   useEffect(() => {
-    if (activeClient.commerce.provider === 'woocommerce') {
-      const loadWooCommerceData = async () => {
-        try {
-          // Dynamic import for browser context
-          const { StoreApiClient } = await import('../wordpress/integration/store-api-client.mjs');
-          const wordpressUrl = process.env.VITE_WORDPRESS_URL || 'http://localhost:8080';
-          const storeApiClient = new StoreApiClient(wordpressUrl);
-          await storeApiClient.connect();
-          const catalogProvider = new WooCommerceCatalogProvider(storeApiClient);
-
-          const categories = await catalogProvider.getCategories(activeClient.id);
-          if (categories.length > 0) {
-            setClientCategories(categories);
-          }
-
-          const result = await catalogProvider.queryCatalog(activeClient.id, {
-            page: 1,
-            perPage: 1000,
-          });
-          if (result.products.length > 0) {
-            setClientProducts(result.products);
-          }
-        } catch (error) {
-          console.warn('WooCommerce Live Provider unavailable, using demo data:', error);
-          // Keep demo data if WooCommerce fails
-        }
-      };
-      loadWooCommerceData();
-    }
-  }, [activeClient.id, activeClient.commerce.provider]);
+    if (!isLive) return;
+    const controller = new AbortController();
+    setCatalogLoading(true);
+    setCatalogError(null);
+    // CLAUDE HANDOFF: Vite browser values come from import.meta.env, not process.env.
+    // Live failures remain visible; NEVER retain demo products as a fallback.
+    const load = async () => {
+      try {
+        if (activeClient.commerce.provider !== 'woocommerce') throw new Error('Unsupported live catalog provider');
+        const url = resolveCatalogUrl(activeClient, import.meta.env);
+        const minorUnit = new Intl.NumberFormat('en', { style: 'currency', currency: activeClient.defaultCurrency }).resolvedOptions().maximumFractionDigits;
+        const provider = new WooCommerceCatalogProvider(url, activeClient.defaultCurrency, minorUnit);
+        const result = await loadLiveCatalog(provider, activeClient.id, controller.signal);
+        if (controller.signal.aborted) return;
+        setClientProducts(result.products);
+        setClientCategories(result.categories);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setClientProducts([]);
+        setClientCategories([]);
+        setCatalogError(error instanceof Error ? error.message : 'Catalog unavailable');
+      } finally {
+        if (!controller.signal.aborted) setCatalogLoading(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [isLive, catalogAttempt]);
 
   // A product "slug" is just its id today (see README — real slugs would
   // come from a real CommerceProvider). No fallback to another product: an
@@ -366,6 +370,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         client: activeClient,
         products: clientProducts,
         categories: clientCategories,
+        catalogLoading,
+        catalogError,
+        retryCatalog: () => setCatalogAttempt(attempt => attempt + 1),
         getProductBySlug,
         cart,
         addToCart,

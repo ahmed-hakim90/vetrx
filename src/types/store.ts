@@ -65,7 +65,7 @@ export interface Product {
   title: LocalizedString;
   brand: string;
   category: string;
-  price: number; // Base price in AED
+  price: number; // Major units of the active client's catalog currency
   originalPrice?: number;
   rating: number;
   reviewCount: number;
@@ -78,6 +78,7 @@ export interface Product {
   };
   inStock: boolean;
   stockCount: number;
+  stockQuantityKnown?: boolean; // false when Store API does not disclose quantity
   variants?: {
     colors?: ProductVariant[];
     storage?: ProductVariant[];

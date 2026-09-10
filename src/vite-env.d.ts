@@ -2,9 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_STORE_ID: string;
-  readonly VITE_WOOCOMMERCE_BASE_URL?: string;
-  readonly VITE_WOOCOMMERCE_CONSUMER_KEY_VAR?: string;
-  readonly VITE_WOOCOMMERCE_CONSUMER_SECRET_VAR?: string;
+  readonly VITE_WORDPRESS_URL?: string;
 }
 
 interface ImportMeta {

@@ -100,7 +100,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div className="text-xs font-semibold text-rose-600">
             {language === 'ar' ? 'غير متوفر' : 'Out of Stock'}
           </div>
-        ) : product.stockCount < 5 ? (
+        ) : product.stockQuantityKnown !== false && product.stockCount > 0 && product.stockCount < 5 ? (
           <div className="text-xs font-semibold text-amber-600">
             {language === 'ar' ? `${product.stockCount} متبقي فقط` : `Only ${product.stockCount} left`}
           </div>

@@ -1,173 +1,205 @@
-import { Category, Brand, CatalogQuery, CatalogQueryResult, Product } from '../../types/store';
-import { CatalogProvider } from './CatalogProvider';
-import { StoreApiClient } from '../../../wordpress/integration/store-api-client.mjs';
+import type { Brand, CatalogQuery, CatalogQueryResult, Category, Product, StoreId } from '../../types/store';
+import type { CatalogProvider } from './CatalogProvider';
+
+interface Term {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  count: number;
+  parent?: number;
+  image?: { src: string } | null;
+}
+interface StoreProduct {
+  id: number;
+  name: string;
+  description: string;
+  prices: {
+    price: string;
+    regular_price: string;
+    currency_minor_unit: number;
+    currency_code: string;
+  };
+  on_sale: boolean;
+  is_in_stock: boolean;
+  low_stock_remaining: number | null;
+  average_rating: string;
+  review_count: number;
+  images: { src: string }[];
+  categories: Term[];
+  brands?: Term[];
+  attributes?: { name: string; terms: { name: string }[] }[];
+}
+interface Page<T> {
+  items: T[];
+  total: number;
+  totalPages: number;
+}
+
+const localized = (text: string) => ({ en: text, ar: text });
+const plainText = (html = '') => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
 /**
- * WooCommerce Live implementation via Store API.
- *
- * Contract expectations:
- * - Categories are returned as WooCommerce product_cat taxonomy terms
- * - Brands can be a custom taxonomy (pa_brand) or attribute
- * - Products endpoint supports: search, categories, attributes, sort, pagination
- * - Facets are derived from product attributes (pa_*)
- *
- * Adapter responsibilities:
- * - Map WooCommerce taxonomy structure to Category interface
- * - Handle currency and minor units
- * - Cache category hierarchies (optional)
- * - Validate Store API availability before queries
+ * CLAUDE HANDOFF: browser catalog requests MUST use the public Store API.
+ * Do not restore wc/v3, consumer secrets, or a mock fallback on live failures.
+ * Store API returns an array, pagination in headers, and prices in minor units.
  */
 export class WooCommerceCatalogProvider implements CatalogProvider {
-  constructor(private storeApiClient: StoreApiClient) {}
-
-  async getCategories(_clientId: string, _parentId?: string, _signal?: AbortSignal): Promise<Category[]> {
-    try {
-      // WooCommerce Store API doesn't provide categories directly;
-      // use REST API for hierarchical category data.
-      // This requires /wp-json/wc/v3/products/categories endpoint (may need admin scope).
-      // For now, return empty array and note this is a gap.
-      console.warn('getCategories: WooCommerce Store API does not expose category hierarchy. Use /wp-json/wc/v3/products/categories with REST authentication.');
-      return [];
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      throw error;
+  private readonly api: string;
+  constructor(wordpressUrl: string, private readonly currencyCode?: string, private readonly minorUnit = 2) {
+    const url = new URL(wordpressUrl);
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+      throw new Error('Invalid public WordPress URL');
     }
+    this.api = url.href.replace(/\/$/, '') + '/wp-json/wc/store/v1';
   }
 
-  async getCategoryBySlug(_clientId: string, slug: string, signal?: AbortSignal): Promise<Category | undefined> {
-    try {
-      const categories = await this.getCategories(clientId, undefined, signal);
-      return categories.find(c => c.slug === slug);
-    } catch {
-      return undefined;
+  private async page<T>(path: string, params: URLSearchParams, signal?: AbortSignal): Promise<Page<T>> {
+    const response = await fetch(this.api + '/' + path + '?' + params, {
+      credentials: 'omit',
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+      headers: { Accept: 'application/json' },
+    });
+    const body: unknown = await response.json();
+    if (!response.ok) {
+      const message = body && typeof body === 'object' && 'message' in body ? String(body.message) : 'HTTP ' + response.status;
+      throw new Error(message);
     }
+    if (!Array.isArray(body)) throw new Error('Invalid Store API collection response');
+    const totalHeader = response.headers.get('X-WP-Total');
+    const pagesHeader = response.headers.get('X-WP-TotalPages');
+    // Missing CORS-exposed totals must not silently truncate the catalog to one page.
+    if (totalHeader === null || pagesHeader === null) {
+      throw new Error('Missing pagination headers: expose X-WP-Total and X-WP-TotalPages in the bridge');
+    }
+    const total = Number(totalHeader);
+    const totalPages = Number(pagesHeader);
+    if (!Number.isSafeInteger(total) || total < 0 || !Number.isSafeInteger(totalPages) || totalPages < 0) {
+      throw new Error('Invalid Store API pagination headers');
+    }
+    return { items: body as T[], total, totalPages };
   }
 
-  async getBrands(_clientId: string, _signal?: AbortSignal): Promise<Brand[]> {
-    try {
-      // Brands in WooCommerce: custom attribute 'pa_brand' (or similar).
-      // Store API exposes product attributes; fetch one product to inspect available attributes.
-      // This is a limitation: facet endpoints require custom implementation.
-      console.warn('getBrands: WooCommerce Store API does not expose available attribute values. Use /wp-json/wc/v3/products/attributes or custom endpoint.');
-      return [];
-    } catch (error) {
-      console.error('Error fetching brands:', error);
-      throw error;
+  private async terms(path: string, signal?: AbortSignal): Promise<Term[]> {
+    const result: Term[] = [];
+    for (let page = 1, pages = 1; page <= pages; page++) {
+      const data = await this.page<Term>(path, new URLSearchParams({
+        per_page: '100', page: String(page), orderby: 'slug', order: 'asc',
+      }), signal);
+      if (page < data.totalPages && data.items.length === 0) throw new Error('Incomplete taxonomy response');
+      pages = data.totalPages;
+      result.push(...data.items);
     }
+    return result;
   }
 
-  async getBrandBySlug(clientId: string, slug: string, signal?: AbortSignal): Promise<Brand | undefined> {
-    try {
-      const brands = await this.getBrands(clientId, signal);
-      return brands.find(b => b.slug === slug);
-    } catch {
-      return undefined;
-    }
+  async getCategories(_clientId: string, parentId?: string, signal?: AbortSignal): Promise<Category[]> {
+    const terms = await this.terms('products/categories', signal);
+    return terms.filter(t => parentId === undefined || String(t.parent || 0) === parentId).map(t => ({
+      id: String(t.id), slug: t.slug, name: localized(t.name),
+      description: t.description ? localized(plainText(t.description)) : undefined,
+      image: t.image?.src, parentId: t.parent ? String(t.parent) : undefined, count: t.count,
+    }));
+  }
+
+  async getCategoryBySlug(clientId: string, slug: string, signal?: AbortSignal) {
+    return (await this.getCategories(clientId, undefined, signal)).find(t => t.slug === slug);
+  }
+
+  async getBrands(_clientId: string, signal?: AbortSignal): Promise<Brand[]> {
+    // Native product_brand taxonomy; never reinterpret pa_brand as the same taxonomy.
+    return (await this.terms('products/brands', signal)).map(t => ({
+      id: String(t.id), slug: t.slug, name: t.name, count: t.count, logo: t.image?.src,
+      description: t.description ? localized(plainText(t.description)) : undefined,
+    }));
+  }
+
+  async getBrandBySlug(clientId: string, slug: string, signal?: AbortSignal) {
+    return (await this.getBrands(clientId, signal)).find(t => t.slug === slug);
   }
 
   async queryCatalog(clientId: string, query: CatalogQuery, signal?: AbortSignal): Promise<CatalogQueryResult> {
-    try {
-      const searchParams = new URLSearchParams();
-
-      // Pagination
-      searchParams.set('page', String(query.page || 1));
-      searchParams.set('per_page', String(query.perPage || 12));
-
-      // Search
-      if (query.searchQuery) {
-        searchParams.set('search', query.searchQuery);
-      }
-
-      // Sort
-      if (query.sortBy) {
-        const orderMap: Record<string, string> = {
-          'price-asc': 'price',
-          'price-desc': 'price',
-          'rating': 'rating',
-          'newest': 'date',
-          'featured': 'popularity',
-        };
-        const order = query.sortBy.includes('desc') ? 'desc' : 'asc';
-        if (orderMap[query.sortBy]) {
-          searchParams.set('orderby', orderMap[query.sortBy]);
-          searchParams.set('order', order);
-        }
-      }
-
-      // Note: filtering by category and attributes requires custom REST endpoints
-      // Store API does not support category or attribute filtering directly.
-      // This is documented in Commerce Bridge as a gap.
-      if (query.categorySlug) {
-        console.warn(`queryCatalog: Category filtering (${query.categorySlug}) requires custom /wp-json endpoint.`);
-      }
-      if (query.brandSlugs?.length) {
-        console.warn(`queryCatalog: Brand filtering requires custom /wp-json endpoint.`);
-      }
-
-      // Attempt Store API query (will only work for search/sort/pagination)
-      const result = await this.storeApiClient.request(`products?${searchParams}`);
-
-      // Map WooCommerce response to CatalogQueryResult
-      return {
-        products: this.mapWooCommerceProducts(result.products || []),
-        facets: [], // Would require custom endpoint or attribute inspection
-        pagination: {
-          page: query.page || 1,
-          perPage: query.perPage || 12,
-          total: result.total || 0,
-          totalPages: result.pages || 0,
-        },
-      };
-    } catch (error) {
-      console.error('Error querying catalog:', error);
-      throw error;
+    const page = Math.max(1, Math.trunc(query.page || 1));
+    // WooCommerce rejects per_page=1000 with HTTP 400; maximum is 100.
+    const perPage = Math.min(100, Math.max(1, Math.trunc(query.perPage || 12)));
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage), orderby: 'id', order: 'asc', catalog_visibility: 'catalog' });
+    if (query.searchQuery) {
+      params.set('search', query.searchQuery);
+      params.set('catalog_visibility', 'search');
     }
+    if (query.categorySlug) params.set('category', query.categorySlug);
+    if (query.brandSlugs?.length) params.set('brand', query.brandSlugs.join(','));
+    if (query.inStockOnly) params.set('stock_status[0]', 'instock');
+    const sorts = {
+      featured: ['menu_order', 'asc'], 'price-asc': ['price', 'asc'],
+      'price-desc': ['price', 'desc'], rating: ['rating', 'desc'], newest: ['date', 'desc'],
+    };
+    if (query.sortBy) {
+      const [orderby, order] = sorts[query.sortBy];
+      params.set('orderby', orderby);
+      params.set('order', order);
+    }
+    for (const [key, value] of [['min_price', query.minPrice], ['max_price', query.maxPrice]] as const) {
+      if (value !== undefined) params.set(key, String(Math.round(value * 10 ** this.minorUnit)));
+    }
+    Object.entries(query.facets || {}).filter(([, values]) => values.length).forEach(([taxonomy, values], i) => {
+      params.set('attributes[' + i + '][attribute]', taxonomy);
+      params.set('attributes[' + i + '][slug]', values.join(','));
+      params.set('attributes[' + i + '][operator]', 'in');
+    });
+    if (query.facets) params.set('attribute_relation', 'and');
+    const result = await this.page<StoreProduct>('products', params, signal);
+    return {
+      products: result.items.map(p => this.product(p, clientId)),
+      // No fabricated counts from the loaded page. Collection-data integration is separate.
+      facets: [],
+      pagination: { page, perPage, total: result.total, totalPages: result.totalPages },
+    };
   }
 
-  async getProductsByCategory(clientId: string, categorySlug: string, page = 1, perPage = 12, signal?: AbortSignal): Promise<CatalogQueryResult> {
+  private product(p: StoreProduct, clientId: string): Product {
+    const prices = p.prices;
+    if (!prices || !Number.isInteger(prices.currency_minor_unit) || prices.currency_minor_unit < 0 ||
+      !/^\d+$/.test(prices.price) || !/^\d+$/.test(prices.regular_price)) {
+      throw new Error('Invalid Store API product prices');
+    }
+    if (this.currencyCode && prices.currency_code !== this.currencyCode) {
+      throw new Error('WooCommerce currency does not match the client configuration');
+    }
+    const divisor = 10 ** prices.currency_minor_unit;
+    const price = Number(prices.price) / divisor;
+    const regular = Number(prices.regular_price) / divisor;
+    const attributes = (p.attributes || []).map(a => ({
+      label: localized(a.name), value: localized(a.terms.map(t => t.name).join(', ')),
+    }));
+    return {
+      id: String(p.id), storeId: clientId as StoreId, title: localized(p.name),
+      brand: p.brands?.[0]?.name || '', category: p.categories[0]?.slug || '',
+      price, originalPrice: p.on_sale && regular > price ? regular : undefined,
+      rating: Number(p.average_rating || 0), reviewCount: p.review_count || 0,
+      images: p.images.map(i => i.src), description: localized(plainText(p.description)),
+      shortSpecs: attributes.slice(0, 3).map(a => a.value), inStock: p.is_in_stock,
+      // Null means WooCommerce did not disclose an exact quantity, NOT zero stock.
+      stockCount: p.low_stock_remaining ?? 0,
+      stockQuantityKnown: p.low_stock_remaining !== null && p.low_stock_remaining !== undefined,
+      specs: attributes.length ? [{ group: localized('Specifications'), items: attributes }] : [],
+      reviews: [], warranty: localized(''), isDemo: false,
+    };
+  }
+
+  getProductsByCategory(clientId: string, categorySlug: string, page = 1, perPage = 12, signal?: AbortSignal) {
     return this.queryCatalog(clientId, { categorySlug, page, perPage }, signal);
   }
-
-  async getProductsByBrand(clientId: string, brandSlug: string, page = 1, perPage = 12, signal?: AbortSignal): Promise<CatalogQueryResult> {
+  getProductsByBrand(clientId: string, brandSlug: string, page = 1, perPage = 12, signal?: AbortSignal) {
     return this.queryCatalog(clientId, { brandSlugs: [brandSlug], page, perPage }, signal);
   }
-
-  async searchProducts(clientId: string, query: string, page = 1, perPage = 12, signal?: AbortSignal): Promise<CatalogQueryResult> {
-    return this.queryCatalog(clientId, { searchQuery: query, page, perPage }, signal);
-  }
-
-  private mapWooCommerceProducts(wooProducts: Record<string, unknown>[]): Product[] {
-    // Map WooCommerce product format to our Product type
-    // This is a placeholder; actual mapping depends on WooCommerce response structure
-    return wooProducts.map((p) => ({
-      id: String(p.id),
-      storeId: 'shams' as const, // Would come from clientId parameter
-      title: { en: String(p.name || ''), ar: String(p.name || '') }, // WC response doesn't have Arabic; would need extra field
-      brand: String((p.attributes as Array<{name: string; options: string[]}>)?.find((a) => a.name === 'Brand')?.options?.[0] || 'Unknown'),
-      category: String((p.categories as Array<{slug: string}>)?.[0]?.slug || 'uncategorized'),
-      price: parseInt(String(p.price || 0)),
-      originalPrice: p.regular_price ? parseInt(String(p.regular_price)) : undefined,
-      rating: parseFloat(String(p.average_rating || 0)),
-      reviewCount: parseInt(String(p.review_count || 0)),
-      images: ((p.images as Array<{src: string}>) || []).map((img) => String(img.src)),
-      description: { en: String(p.description || ''), ar: '' },
-      shortSpecs: [],
-      inStock: p.stock_status === 'instock',
-      stockCount: parseInt(String(p.stock_quantity || 0)),
-      specs: [],
-      reviews: [],
-      warranty: { en: '', ar: '' },
-    }));
+  searchProducts(clientId: string, searchQuery: string, page = 1, perPage = 12, signal?: AbortSignal) {
+    return this.queryCatalog(clientId, { searchQuery, page, perPage }, signal);
   }
 }
 
-// Factory function to create provider based on config
-export async function createCatalogProvider(storeApiUrl?: string) {
-  if (storeApiUrl) {
-    const client = new StoreApiClient(storeApiUrl);
-    return new WooCommerceCatalogProvider(client);
-  }
-  // Return mock if no store API configured
+export async function createCatalogProvider(wordpressUrl?: string) {
+  if (wordpressUrl !== undefined) return new WooCommerceCatalogProvider(wordpressUrl);
   const { MockCatalogProvider } = await import('./MockCatalogProvider');
   return new MockCatalogProvider();
 }

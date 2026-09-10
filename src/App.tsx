@@ -100,7 +100,10 @@ const BrandPageWrapper: React.FC = () => {
 };
 
 const MainContent: React.FC = () => {
-  const { t } = useStore();
+  const { t, language, client, catalogLoading, catalogError, retryCatalog } = useStore();
+  // CLAUDE HANDOFF: live catalog does not make the mock checkout a real checkout.
+  // Remove this guard only after cart/order/payment consumers use the live backend.
+  const liveCheckoutNotice = <p role="status" className="p-8 text-center">{language === 'ar' ? 'الشراء من الواجهة الجديدة غير متاح بعد؛ ربط السلة والدفع قيد التجهيز.' : 'Checkout is not available yet; live cart and payment integration is pending.'}</p>;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 selection:bg-blue-600 selection:text-white">
@@ -117,6 +120,13 @@ const MainContent: React.FC = () => {
       <Header />
 
       <main id="main-content" className="flex-1">
+        {catalogLoading ? <PageFallback /> : catalogError ? (
+          <section className="p-8 text-center space-y-4" aria-labelledby="catalog-error-title">
+            <h1 id="catalog-error-title">{language === 'ar' ? 'تعذر تحميل كتالوج المتجر' : 'Unable to load the store catalog'}</h1>
+            <p role="alert">{catalogError}</p>
+            <button type="button" onClick={retryCatalog} className="bg-primary text-white px-4 py-2 rounded-lg">{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button>
+          </section>
+        ) : (
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<HomeScreen />} />
@@ -129,8 +139,8 @@ const MainContent: React.FC = () => {
             <Route path="/product/:productSlug" element={<ProductDetailScreen />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/checkout" element={<CheckoutScreen />} />
-            <Route path="/order/:orderId" element={<OrderConfirmationScreen />} />
+            <Route path="/checkout" element={client.commerce.provider === 'mock' ? <CheckoutScreen /> : liveCheckoutNotice} />
+            <Route path="/order/:orderId" element={client.commerce.provider === 'mock' ? <OrderConfirmationScreen /> : liveCheckoutNotice} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/faq" element={<Faq />} />
@@ -142,6 +152,7 @@ const MainContent: React.FC = () => {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        )}
       </main>
 
       <QuickViewModal />
