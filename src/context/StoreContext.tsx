@@ -17,7 +17,6 @@ import { activeClient } from '../config/active-client';
 import { ClientConfig } from '../config/clients/schema';
 import { readClientStorage, writeClientStorage } from '../core/storage/clientStorage';
 import { getDemoProductsForClient, getDemoCategoriesForClient } from '../core/commerce/demoCatalog';
-import { StoreApiClient } from '../wordpress/integration/store-api-client.mjs';
 import { WooCommerceCatalogProvider } from '../core/catalog/WooCommerceCatalogProvider';
 
 export type TranslationKey = keyof typeof translations.en;
@@ -130,37 +129,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [language]);
 
-  // Products/categories come from either the demo catalog (mock) or WooCommerce Live Provider
+  // Products/categories always start with demo data (fallback/default)
   const [clientProducts, setClientProducts] = useState<Product[]>(() =>
-    activeClient.commerce.provider === 'mock' ? getDemoProductsForClient(activeClient.id) : []
+    getDemoProductsForClient(activeClient.id)
   );
   const [clientCategories, setClientCategories] = useState<Category[]>(() =>
-    activeClient.commerce.provider === 'mock' ? getDemoCategoriesForClient(activeClient.id) : []
+    getDemoCategoriesForClient(activeClient.id)
   );
 
-  // If using WooCommerce Live, load data from plugin
+  // If using WooCommerce Live, try to load live data (but keep demo as fallback)
   useEffect(() => {
     if (activeClient.commerce.provider === 'woocommerce') {
       const loadWooCommerceData = async () => {
         try {
+          // Dynamic import for browser context
+          const { StoreApiClient } = await import('../wordpress/integration/store-api-client.mjs');
           const wordpressUrl = process.env.VITE_WORDPRESS_URL || 'http://localhost:8080';
-          const client = new StoreApiClient(wordpressUrl);
-          await client.connect();
-          const catalogProvider = new WooCommerceCatalogProvider(client);
+          const storeApiClient = new StoreApiClient(wordpressUrl);
+          await storeApiClient.connect();
+          const catalogProvider = new WooCommerceCatalogProvider(storeApiClient);
 
           const categories = await catalogProvider.getCategories(activeClient.id);
-          setClientCategories(categories);
+          if (categories.length > 0) {
+            setClientCategories(categories);
+          }
 
           const result = await catalogProvider.queryCatalog(activeClient.id, {
             page: 1,
             perPage: 1000,
           });
-          setClientProducts(result.products);
+          if (result.products.length > 0) {
+            setClientProducts(result.products);
+          }
         } catch (error) {
-          console.error('Failed to load WooCommerce data:', error);
-          // Fall back to demo data on error
-          setClientProducts(getDemoProductsForClient(activeClient.id));
-          setClientCategories(getDemoCategoriesForClient(activeClient.id));
+          console.warn('WooCommerce Live Provider unavailable, using demo data:', error);
+          // Keep demo data if WooCommerce fails
         }
       };
       loadWooCommerceData();

@@ -266,7 +266,10 @@ export const shamsConfig: ClientConfig = {
     expressDeliveryEnabled: false,
   },
   commerce: {
-    provider: 'mock',
+    provider: 'woocommerce',
+    envVarNames: {
+      baseUrl: 'VITE_WORDPRESS_URL',
+    },
   },
   demoCouponCodes: [],
   orderNumberPrefix: 'SHAMS',
