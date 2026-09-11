@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Category } from '../../types/store';
 import { getCategoryIcon } from '../../core/catalog/categoryIcons';
+import { colors, spacing, radius, container, typography } from '../../styles/design-tokens';
 
 interface HomeCategoriesSectionProps {
   categories: Category[];
@@ -14,43 +15,134 @@ export const HomeCategoriesSection: React.FC<HomeCategoriesSectionProps> = ({ ca
   if (categories.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
+    <section
+      style={{
+        maxWidth: container.maxWidth,
+        margin: '0 auto',
+        padding: `${spacing.xl} 1rem`,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: spacing.lg,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: '28px',
+            fontWeight: 700,
+            color: colors['on-background'],
+          }}
+        >
           {language === 'ar' ? 'استكشف الفئات الرئيسية' : 'Explore Core Tech Categories'}
         </h2>
-        <a href="#" className="text-blue-600 hover:text-blue-700 text-sm font-semibold flex items-center gap-1">
+        <a
+          href="#"
+          style={{
+            color: colors.primary,
+            fontSize: '14px',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            textDecoration: 'none',
+            transition: 'color 150ms ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = colors['primary-hover'])}
+          onMouseLeave={(e) => (e.currentTarget.style.color = colors.primary)}
+        >
           {language === 'ar' ? 'اعرض الكل' : 'View All'}
           <ChevronRight size={16} />
         </a>
       </div>
 
       {/* Categories Grid - 6 columns */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: spacing.md,
+        }}
+      >
         {categories.slice(0, 6).map((category) => {
           const IconComponent = getCategoryIcon(category.id);
           return (
             <button
               key={category.id}
               onClick={() => navigateToCategory(category.slug)}
-              className="flex flex-col items-center gap-3 p-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 transition-all group cursor-pointer"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: spacing.md,
+                borderRadius: radius.lg,
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors['surface-container-low'];
+                e.currentTarget.style.borderColor = colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = colors.surface;
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             >
-              <div className="w-16 h-16 rounded-lg bg-slate-100 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: radius.md,
+                  backgroundColor: colors['surface-container'],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 150ms ease',
+                }}
+              >
                 {category.image ? (
                   <img
                     src={category.image}
                     alt={category.name.en}
-                    className="w-12 h-12 object-contain"
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      objectFit: 'contain',
+                    }}
                   />
                 ) : (
-                  IconComponent && <IconComponent size={24} className="text-slate-600 group-hover:text-blue-600" />
+                  IconComponent && <IconComponent size={24} style={{ color: colors['on-surface-variant'] }} />
                 )}
               </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-sm text-slate-900 line-clamp-2">
+              <div style={{ textAlign: 'center' }}>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    color: colors['on-background'],
+                    lineClamp: '2',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
                   {language === 'ar' ? category.name.ar : category.name.en}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
+                <p
+                  style={{
+                    fontSize: '12px',
+                    color: colors['on-surface-variant'],
+                    marginTop: spacing.xs,
+                  }}
+                >
                   {category.count || 0} {language === 'ar' ? 'منتج' : 'products'}
                 </p>
               </div>

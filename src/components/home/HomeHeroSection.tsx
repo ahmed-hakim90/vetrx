@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, ArrowLeft, Flame, Zap } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Product } from '../../types/store';
+import { colors, spacing, radius, container } from '../../styles/design-tokens';
 
 interface HomeHeroSectionProps {
   featuredProduct: Product | undefined;
@@ -12,18 +13,47 @@ export const HomeHeroSection: React.FC<HomeHeroSectionProps> = ({
   featuredProduct,
   promoProduct,
 }) => {
-  const { language, t, formatPrice, navigateToProduct } = useStore();
+  const { language, formatPrice, navigateToProduct } = useStore();
   const ArrowIcon = language === 'ar' ? ArrowLeft : ArrowRight;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 pb-8">
+    <section
+      style={{
+        maxWidth: container.maxWidth,
+        margin: '0 auto',
+        padding: `${spacing.lg} 1rem`,
+      }}
+    >
       {/* Ticker Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-4 py-2 rounded-lg mb-6">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing.sm,
+          backgroundColor: colors['surface-container-low'],
+          padding: `${spacing.sm} 1rem`,
+          borderRadius: radius.md,
+          marginBottom: spacing.lg,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: `0.25rem 0.5rem`,
+              borderRadius: radius.full,
+              backgroundColor: colors['tertiary-container'],
+              color: colors.tertiary,
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
             OFFICIAL PARTNER
           </span>
-          <span className="text-sm text-slate-600">
+          <span style={{ fontSize: '14px', color: colors['on-surface-variant'] }}>
             {language === 'ar'
               ? 'توصيل في نفس اليوم متاح على الطلبات المُسجلة قبل الساعة 2:00 ظهراً'
               : 'Cairo & Giza Same-Day Delivery available on orders placed before 2:00 PM'}
@@ -32,151 +62,309 @@ export const HomeHeroSection: React.FC<HomeHeroSectionProps> = ({
       </div>
 
       {/* Main Grid: 8 Cols Left + 4 Cols Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Primary Featured Banner (8 Cols) */}
-        <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm p-6 md:p-8 relative overflow-hidden flex flex-col justify-between min-h-96">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: spacing.lg,
+        }}
+      >
+        {/* Primary Featured Banner (8 Cols / 2/3 width) */}
+        <div
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radius.lg,
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            padding: spacing.xl,
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '384px',
+            gridColumn: 'span 2',
+          }}
+        >
           {/* Decorative glow */}
-          <div className="absolute -right-16 -top-16 w-96 h-96 bg-blue-100/40 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute right-12 bottom-4 w-72 h-72 bg-amber-100/30 rounded-full blur-2xl pointer-events-none"></div>
+          <div
+            style={{
+              position: 'absolute',
+              right: '-64px',
+              top: '-64px',
+              width: '384px',
+              height: '384px',
+              backgroundColor: 'rgba(0, 74, 198, 0.1)',
+              borderRadius: '50%',
+              filter: 'blur(64px)',
+              pointerEvents: 'none',
+            }}
+          />
 
           {/* Content */}
-          <div className="relative z-10 space-y-6">
+          <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                <span
+                  style={{
+                    backgroundColor: colors.primary,
+                    color: colors['on-primary'],
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    padding: `0.25rem 0.5rem`,
+                    borderRadius: radius.sm,
+                  }}
+                >
                   PRO COMPUTING
                 </span>
-                <span className="text-xs text-slate-600">
-                  {language === 'ar'
-                    ? 'M3 Max و Core Ultra 9 الرائدة'
-                    : 'M3 Max & Core Ultra 9 Flagships'}
+                <span style={{ fontSize: '12px', color: colors['on-surface-variant'] }}>
+                  {language === 'ar' ? 'M3 Max و Core Ultra 9 الرائدة' : 'M3 Max & Core Ultra 9 Flagships'}
                 </span>
               </div>
-              <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+              <div
+                style={{
+                  backgroundColor: '#fee2e2',
+                  color: colors.error,
+                  padding: `0.25rem 0.75rem`,
+                  borderRadius: radius.full,
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                }}
+              >
                 <Flame size={14} />
-                {language === 'ar'
-                  ? 'وفر حتى ٨,٠٠٠ ج.م'
-                  : 'Save up to 8,000 EGP'}
+                {language === 'ar' ? 'وفر حتى ٨,٠٠٠ ج.م' : 'Save up to 8,000 EGP'}
               </div>
             </div>
 
             {/* Heading & Description */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-              <div className="md:col-span-3 space-y-2">
-                <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: spacing.md,
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {language === 'ar' ? 'مصممة للعمل الثقيل' : 'Engineered for Extreme Workloads'}
                 </p>
-                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">
-                  {featuredProduct?.title[language] || (language === 'ar'
-                    ? 'Apple MacBook Pro M3 Max و Dell XPS 16'
-                    : 'Apple MacBook Pro M3 Max & Dell XPS 16')}
+                <h1
+                  style={{
+                    fontSize: '32px',
+                    fontWeight: 700,
+                    color: colors['on-background'],
+                    lineHeight: '1.2',
+                  }}
+                >
+                  {featuredProduct?.title[language] ||
+                    (language === 'ar' ? 'Apple MacBook Pro M3 Max و Dell XPS 16' : 'Apple MacBook Pro M3 Max & Dell XPS 16')}
                 </h1>
-                <p className="text-sm text-slate-600 line-clamp-2">
-                  {featuredProduct?.description[language] || (language === 'ar'
-                    ? 'كثافة حاسوبية لا مثيل لها، شاشات XDR بلورية، وكفاءة بطارية طوال اليوم. مُجهزة بالكامل بتخطيطات لوحة مفاتيح محلية ثنائية اللغة وضمان مصري رسمي لمدة سنتين.'
-                    : 'Unrivaled computing density, liquid crystal XDR displays, and all-day battery efficiency. Fully configured with local bilingual keyboard layouts and official 2-year warranty.')}
+                <p style={{ fontSize: '14px', color: colors['on-surface-variant'], lineHeight: '1.5' }}>
+                  {featuredProduct?.shortSpecs?.[0]?.[language] ||
+                    (language === 'ar'
+                      ? 'كثافة حاسوبية لا مثيل لها مع ضمان رسمي'
+                      : 'Unrivaled computing density with official warranty')}
                 </p>
 
                 {/* Installment Info */}
-                <div className="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg text-sm mt-2">
-                  <Zap size={16} className="text-blue-600" />
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    backgroundColor: colors['surface-container-low'],
+                    padding: `${spacing.sm} ${spacing.md}`,
+                    borderRadius: radius.md,
+                    fontSize: '14px',
+                    marginTop: spacing.sm,
+                    width: 'fit-content',
+                  }}
+                >
+                  <Zap size={16} style={{ color: colors.primary }} />
                   <span>
-                    {language === 'ar'
-                      ? 'من ١,٢٥٠ ج.م / شهر بدون فائدة عبر Paymob و valU'
-                      : 'From 1,250 EGP / mo with 0% interest via Paymob & valU'}
+                    {language === 'ar' ? 'من 1,250 ج.م / شهر' : 'From 1,250 EGP / mo with 0% interest'}
                   </span>
                 </div>
               </div>
 
               {/* Product Image */}
               {featuredProduct?.images?.[0] && (
-                <div className="md:col-span-2 flex items-center justify-center">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img
                     src={featuredProduct.images[0]}
                     alt={featuredProduct.title.en}
-                    className="w-full max-h-48 object-contain hover:scale-105 transition-transform"
+                    style={{
+                      width: '100%',
+                      maxHeight: '192px',
+                      objectFit: 'contain',
+                      transition: 'transform 200ms ease',
+                    }}
                   />
                 </div>
               )}
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm }}>
               <button
                 onClick={() => navigateToProduct(featuredProduct?.id || '')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors['on-primary'],
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  padding: `${spacing.sm} ${spacing.lg}`,
+                  borderRadius: radius.md,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors['primary-hover'])}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors.primary)}
               >
                 <span>{language === 'ar' ? 'تسوق الآن' : 'Shop Now'}</span>
                 <ArrowIcon size={16} />
               </button>
-              <button className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                <Zap size={16} className="text-blue-600" />
-                <span>{language === 'ar' ? 'احسب التقسيط' : 'Calculate Installment'}</span>
+              <button
+                style={{
+                  backgroundColor: colors['surface-container'],
+                  color: colors['on-surface'],
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  padding: `${spacing.sm} ${spacing.md}`,
+                  borderRadius: radius.md,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors['surface-container-high'])}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors['surface-container'])}
+              >
+                <Zap size={16} style={{ color: colors.primary }} />
+                <span>{language === 'ar' ? 'احسب التقسيط' : 'Calculate'}</span>
               </button>
-              <div className="ml-auto hidden xl:flex items-center gap-2 text-xs text-slate-600">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                {language === 'ar' ? 'متوفر في مخزن القاهرة' : 'In Stock at Cairo Hub'}
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Stacked Promos (4 Cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          {/* Promo 1: PS5 Slim */}
+        {/* Right Stacked Promos (4 Cols / 1/3 width) */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: spacing.lg,
+            gridColumn: 'span 1',
+          }}
+        >
+          {/* Promo 1 */}
           {promoProduct && (
-            <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 flex flex-col justify-between">
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderRadius: radius.lg,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                padding: spacing.md,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
               <div>
-                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase">
-                  {language === 'ar' ? 'حصري الألعاب' : 'GAMING EXCLUSIVE'}
+                <span
+                  style={{
+                    backgroundColor: 'rgba(0, 74, 198, 0.1)',
+                    color: colors.primary,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    padding: `0.25rem 0.5rem`,
+                    borderRadius: radius.sm,
+                    display: 'inline-block',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {language === 'ar' ? 'حصري الألعاب' : 'GAMING'}
                 </span>
-                <h3 className="font-bold text-lg text-slate-900 mt-2">{promoProduct.title.en}</h3>
-                <p className="text-xs text-slate-600 mt-1 line-clamp-2">{promoProduct.description.en}</p>
+                <h3 style={{ fontWeight: 700, fontSize: '18px', color: colors['on-background'], marginTop: spacing.sm }}>
+                  {promoProduct.title[language]}
+                </h3>
+                <p style={{ fontSize: '12px', color: colors['on-surface-variant'], marginTop: spacing.xs, lineHeight: '1.4' }}>
+                  {promoProduct.shortSpecs?.[0]?.[language] || promoProduct.title[language]}
+                </p>
               </div>
 
-              <div className="my-3 flex items-center justify-between">
+              <div style={{ margin: `${spacing.md} 0`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: colors.primary, fontVariantNumeric: 'tabular-nums' }}>
                     {formatPrice(promoProduct.price)}
                   </div>
                   {promoProduct.originalPrice && (
-                    <div className="text-xs text-slate-400 line-through">
+                    <div style={{ fontSize: '12px', color: colors['on-surface-variant'], textDecoration: 'line-through' }}>
                       {formatPrice(promoProduct.originalPrice)}
                     </div>
                   )}
-                  <div className="text-xs text-green-600 font-semibold mt-0.5">
-                    {language === 'ar'
-                      ? 'اقسط من 937 ج.م / شهر'
-                      : 'Pay 937 EGP / mo (36 mos)'}
+                  <div style={{ fontSize: '12px', color: colors['status-success'], fontWeight: 600, marginTop: '0.25rem' }}>
+                    {language === 'ar' ? 'اقسط من 937 ج.م / شهر' : '937 EGP/mo (36mos)'}
                   </div>
                 </div>
                 {promoProduct.images?.[0] && (
-                  <img
-                    src={promoProduct.images[0]}
-                    alt={promoProduct.title.en}
-                    className="w-24 h-24 object-contain"
-                  />
+                  <img src={promoProduct.images[0]} alt={promoProduct.title.en} style={{ width: '96px', height: '96px', objectFit: 'contain' }} />
                 )}
               </div>
 
               <button
                 onClick={() => navigateToProduct(promoProduct.id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm w-full py-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors['on-primary'],
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  width: '100%',
+                  padding: spacing.sm,
+                  borderRadius: radius.md,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors['primary-hover'])}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = colors.primary)}
               >
                 {language === 'ar' ? 'أضف للسلة' : 'Add to Cart'}
               </button>
             </div>
           )}
 
-          {/* Promo 2: Placeholder */}
-          <div className="flex-1 bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl shadow-sm p-4 flex flex-col justify-center items-center text-center">
-            <Zap size={32} className="text-purple-600 mb-2" />
-            <h3 className="font-bold text-slate-900">
+          {/* Promo 2 */}
+          <div
+            style={{
+              flex: 1,
+              background: `linear-gradient(135deg, rgba(0, 74, 198, 0.05) 0%, rgba(0, 74, 198, 0.02) 100%)`,
+              borderRadius: radius.lg,
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              padding: spacing.md,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
+            }}
+          >
+            <Zap size={32} style={{ color: colors.primary, marginBottom: spacing.sm }} />
+            <h3 style={{ fontWeight: 700, color: colors['on-background'] }}>
               {language === 'ar' ? 'عرض آخر قادم' : 'More Offers Coming'}
             </h3>
-            <p className="text-xs text-slate-600 mt-1">
-              {language === 'ar' ? 'تحقق قريباً من المزيد من العروض المذهلة' : 'Check back soon for amazing deals'}
+            <p style={{ fontSize: '12px', color: colors['on-surface-variant'], marginTop: spacing.xs }}>
+              {language === 'ar' ? 'تحقق قريباً من المزيد' : 'Check back soon'}
             </p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, TrendingUp, Zap, Shield } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { colors, spacing, radius, container } from '../../styles/design-tokens';
 
 export const HomeFeaturesSection: React.FC = () => {
   const { language } = useStore();
@@ -13,6 +14,7 @@ export const HomeFeaturesSection: React.FC = () => {
         language === 'ar'
           ? 'منتجات معتمدة من الموزع الرسمي مع شهادات أصلية'
           : 'Official distributor authorized products with genuine certificates',
+      iconColor: colors.primary,
     },
     {
       icon: TrendingUp,
@@ -21,6 +23,7 @@ export const HomeFeaturesSection: React.FC = () => {
         language === 'ar'
           ? 'ضمان محلي رسمي بدعم مصري كامل'
           : 'Local official warranty with full Egyptian support',
+      iconColor: colors['status-success'],
     },
     {
       icon: Zap,
@@ -29,6 +32,7 @@ export const HomeFeaturesSection: React.FC = () => {
         language === 'ar'
           ? 'توصيل في نفس اليوم في القاهرة والجيزة'
           : 'Same-day delivery in Cairo & Giza',
+      iconColor: colors['status-warning'],
     },
     {
       icon: Shield,
@@ -37,21 +41,70 @@ export const HomeFeaturesSection: React.FC = () => {
         language === 'ar'
           ? 'خطط تمويل مرنة عبر Paymob و valU'
           : 'Flexible financing via Paymob & valU',
+      iconColor: colors.tertiary,
     },
   ];
 
   return (
-    <section className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <section
+      style={{
+        maxWidth: container.maxWidth,
+        margin: '0 auto',
+        padding: `${spacing.xl} 1rem`,
+      }}
+    >
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: spacing.lg,
+        }}
+      >
         {features.map((feature) => {
           const IconComponent = feature.icon;
           return (
-            <div key={feature.title} className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
-                <IconComponent size={28} className="text-blue-600" />
+            <div
+              key={feature.title}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: radius.md,
+                  backgroundColor: `${feature.iconColor}15`, // 15% opacity
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: spacing.md,
+                }}
+              >
+                <IconComponent size={28} style={{ color: feature.iconColor }} />
               </div>
-              <h3 className="font-semibold text-slate-900 mb-2">{feature.title}</h3>
-              <p className="text-sm text-slate-600">{feature.description}</p>
+              <h3
+                style={{
+                  fontWeight: 600,
+                  color: colors['on-background'],
+                  marginBottom: spacing.sm,
+                  fontSize: '16px',
+                }}
+              >
+                {feature.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: colors['on-surface-variant'],
+                  lineHeight: '1.5',
+                }}
+              >
+                {feature.description}
+              </p>
             </div>
           );
         })}
