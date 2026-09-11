@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "shams-dev",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port=3200", "--strictPort", "--mode", "shams"],
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "VITE_CATALOG_PROVIDER=mock npx vite --port=3200 --strictPort --mode shams"],
       "port": 3200
     },
     {

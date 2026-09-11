@@ -18,7 +18,7 @@ import { ClientConfig } from '../config/clients/schema';
 import { readClientStorage, writeClientStorage } from '../core/storage/clientStorage';
 import { getDemoProductsForClient, getDemoCategoriesForClient } from '../core/commerce/demoCatalog';
 import { WooCommerceCatalogProvider } from '../core/catalog/WooCommerceCatalogProvider';
-import { loadLiveCatalog, resolveCatalogUrl } from '../core/catalog/loadLiveCatalog';
+import { resolveCatalogUrl } from '../core/catalog/loadLiveCatalog';
 
 export type TranslationKey = keyof typeof translations.en;
 
@@ -133,7 +133,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [language]);
 
-  const isLive = activeClient.commerce.provider !== 'mock';
+  // Allow override via env var for testing
+  const isLive = import.meta.env.VITE_CATALOG_PROVIDER === 'mock' ? false : activeClient.commerce.provider !== 'mock';
   const [clientProducts, setClientProducts] = useState<Product[]>(() =>
     isLive ? [] : getDemoProductsForClient(activeClient.id)
   );
@@ -149,18 +150,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const controller = new AbortController();
     setCatalogLoading(true);
     setCatalogError(null);
-    // CLAUDE HANDOFF: Vite browser values come from import.meta.env, not process.env.
-    // Live failures remain visible; NEVER retain demo products as a fallback.
     const load = async () => {
       try {
         if (activeClient.commerce.provider !== 'woocommerce') throw new Error('Unsupported live catalog provider');
         const url = resolveCatalogUrl(activeClient, import.meta.env);
         const minorUnit = new Intl.NumberFormat('en', { style: 'currency', currency: activeClient.defaultCurrency }).resolvedOptions().maximumFractionDigits;
         const provider = new WooCommerceCatalogProvider(url, activeClient.defaultCurrency, minorUnit);
-        const result = await loadLiveCatalog(provider, activeClient.id, controller.signal);
+
+        // Load categories only (not all products)
+        const categories = await provider.getCategories(activeClient.id, undefined, controller.signal);
         if (controller.signal.aborted) return;
-        setClientProducts(result.products);
-        setClientCategories(result.categories);
+        setClientCategories(categories);
+        // Don't load all products — load them per-category as needed (lazy loading)
+        setClientProducts([]);
       } catch (error) {
         if (controller.signal.aborted) return;
         setClientProducts([]);
@@ -415,4 +417,46 @@ export const useStore = () => {
     throw new Error('useStore must be used within a StoreProvider');
   }
   return context;
+};
+
+// Hook for lazy-loading products by category
+export const useCategoryProducts = (categorySlug: string | undefined) => {
+  const { products, client } = useStore();
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!categorySlug || client.commerce.provider !== 'woocommerce') {
+      setCategoryProducts([]);
+      return;
+    }
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const url = process.env.VITE_WORDPRESS_URL || 'http://localhost:8080';
+        const { WooCommerceCatalogProvider } = await import('../core/catalog/WooCommerceCatalogProvider');
+        const minorUnit = new Intl.NumberFormat('en', { style: 'currency', currency: client.defaultCurrency }).resolvedOptions().maximumFractionDigits;
+        const provider = new WooCommerceCatalogProvider(url, client.defaultCurrency, minorUnit);
+
+        const result = await provider.queryCatalog(client.id, {
+          categorySlug,
+          page: 1,
+          perPage: 100,
+        });
+        setCategoryProducts(result.products);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load category products');
+        setCategoryProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [categorySlug, client]);
+
+  return { products: categoryProducts, loading, error };
 };

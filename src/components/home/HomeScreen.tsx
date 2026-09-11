@@ -1,32 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Zap,
-  ArrowRight,
-  ArrowLeft,
-  Truck,
-  ShieldCheck,
-  RotateCcw,
-  CreditCard,
-  Clock,
-  Sparkles,
-  Flame,
-  Star,
-  Eye,
-  Heart,
-  ShoppingCart,
-  Check,
-} from 'lucide-react';
+import { Zap, ArrowRight, ArrowLeft, Truck, ShieldCheck, RotateCcw, CreditCard, Clock, Sparkles, Flame, Star, Eye, Heart, ShoppingCart, Check } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Product } from '../../types/store';
 import { getCategoryIcon } from '../../core/catalog/categoryIcons';
 import { activatableCardProps } from '../../core/a11y/activatableCard';
 import { paymentMethodLabel } from '../../core/payment/paymentLabels';
-import {
-  HeroBannerSkeleton,
-  CategoryGridSkeleton,
-  FlashDealSkeleton,
-  ProductGridSkeleton,
-} from '../feedback';
+import { HeroBannerSkeleton, CategoryGridSkeleton, FlashDealSkeleton, ProductGridSkeleton } from '../feedback';
+import { HomeHeroSection } from './HomeHeroSection';
+import { HomeCategoriesSection } from './HomeCategoriesSection';
+import { HomeFlashDealsSection } from './HomeFlashDealsSection';
+import { HomeBestSellingSection } from './HomeBestSellingSection';
+import { HomeFeaturesSection } from './HomeFeaturesSection';
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -128,11 +112,44 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12 pb-16">
-      {/* 1. Hero Showcase Banner */}
+    <div className="space-y-8 pb-16 pt-20">
+      {/* 1. Features Strip */}
+      <HomeFeaturesSection />
+
+      {/* 2. Hero Section with Featured Product */}
       {isHydrating ? (
         <HeroBannerSkeleton />
       ) : (
+        <HomeHeroSection
+          featuredProduct={products.find(p => p.rating >= 4.5) || products[0]}
+          promoProduct={products.find(p => p.isFlashDeal) || products[1]}
+        />
+      )}
+
+      {/* 3. Categories Grid */}
+      {isHydrating ? (
+        <CategoryGridSkeleton />
+      ) : (
+        <HomeCategoriesSection categories={categories} />
+      )}
+
+      {/* 4. Flash Deals Section */}
+      {isHydrating ? (
+        <FlashDealSkeleton />
+      ) : (
+        <HomeFlashDealsSection products={products} />
+      )}
+
+      {/* 5. Best Selling Section */}
+      {isHydrating ? (
+        <ProductGridSkeleton count={4} columns={4} />
+      ) : (
+        <HomeBestSellingSection products={products} />
+      )}
+
+      {/* Original sections kept for backward compatibility */}
+      {/* HIDDEN: Hero Showcase (now in HomeHeroSection) */}
+      {false && (
         <section className="relative overflow-hidden bg-slate-950 text-white rounded-2xl mx-4 lg:mx-auto max-w-7xl mt-4 border border-slate-800 shadow-xl">
           {/* Glow background elements */}
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-30 pointer-events-none bg-primary" />

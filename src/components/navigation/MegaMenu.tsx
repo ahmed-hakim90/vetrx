@@ -33,7 +33,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ category, subcategories }) =
             {/* Column 1: Direct subcategories */}
             <div>
               <h3 className="font-bold text-sm text-slate-900 mb-4 uppercase tracking-wider">
-                {t('subcategories')}
+                {language === 'ar' ? 'الفئات الفرعية' : 'Subcategories'}
               </h3>
               <div className="space-y-2">
                 {subcategories.slice(0, 5).map((subcat) => (
@@ -86,7 +86,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ category, subcategories }) =
                   }}
                   className="mt-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-medium rounded-lg transition-colors text-sm"
                 >
-                  {t('viewAll')}
+                  {language === 'ar' ? 'عرض الكل' : 'View All'}
                 </button>
               </div>
             </div>
